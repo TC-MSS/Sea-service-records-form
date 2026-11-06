@@ -195,9 +195,27 @@ function calculateTotal() {
 
         }
 
-        const days =
-            Math.floor(
-                (end - start) /
+        const watchHours =
+    row.querySelector(
+        ".watch"
+    ).value;
+
+const days =
+    calculateVoyageDays(
+        embark,
+        disembark
+    );
+
+const creditedDays =
+    calculateCreditedService(
+        days,
+        watchHours
+    );
+
+row.querySelector(
+    ".daysCell"
+).textContent =
+    creditedDays;
                 (1000 * 60 * 60 * 24)
             ) + 1;
 
