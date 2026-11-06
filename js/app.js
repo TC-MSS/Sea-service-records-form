@@ -1,0 +1,1 @@
+document.getElementById("app").innerHTML=`<p>Sea Service Records Version 2 project scaffold</p>`;

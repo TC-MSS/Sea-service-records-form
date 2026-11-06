@@ -1,0 +1,1 @@
+GitHub upload instructions included. Enable GitHub Pages from Settings > Pages.
