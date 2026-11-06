@@ -225,6 +225,7 @@ function calculateTotal() {
         warnings
     );
 
+    evaluateCertificateRequirements();
 }
 
 // =====================================================
