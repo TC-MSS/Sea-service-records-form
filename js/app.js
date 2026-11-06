@@ -156,6 +156,15 @@ function deleteRow(button) {
 function calculateTotal() {
 
     let totalDays = 0;
+    let acceptedDays = 0;
+    acceptedDays += creditedDays;
+    document.getElementById(
+2
+"acceptedDays"
+3
+).textContent =
+4
+acceptedDays;
 
     let warnings = [];
 
