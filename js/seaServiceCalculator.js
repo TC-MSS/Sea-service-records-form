@@ -1,32 +1,73 @@
-function updateSpecialServiceSummary(total) {
+/*
+=====================================================
+Sea Service Calculator
+Phase 3
+=====================================================
+*/
 
-    document.getElementById("polarDays").textContent =
-        document.getElementById("polar").checked ? total : 0;
+function calculateCreditedService(days, watchHours) {
 
-    document.getElementById("iceDays").textContent =
-        document.getElementById("ice").checked ? total : 0;
+    if (!days) {
+        return 0;
+    }
 
-    document.getElementById("oilDays").textContent =
-        document.getElementById("oil").checked ? total : 0;
+    /*
+    Basic model
 
-    document.getElementById("chemicalDays").textContent =
-        document.getElementById("chemical").checked ? total : 0;
+    8-hour watch
+    credit = 1 x sea service
 
-    document.getElementById("lngDays").textContent =
-        document.getElementById("lng").checked ? total : 0;
+    12-hour watch
+    credit = 1.5 x sea service
 
-    document.getElementById("lpgDays").textContent =
-        document.getElementById("lpg").checked ? total : 0;
+    Will be expanded later
+    with TP2293 logic.
+    */
 
-    document.getElementById("dpDays").textContent =
-        document.getElementById("dp").checked ? total : 0;
+    if (parseInt(watchHours) === 12) {
 
-    document.getElementById("offshoreDays").textContent =
-        document.getElementById("offshore").checked ? total : 0;
+        return Math.round(
+            days * 1.5
+        );
 
-    document.getElementById("passengerDays").textContent =
-        document.getElementById("passenger").checked ? total : 0;
+    }
 
-    document.getElementById("fishingDays").textContent =
-        document.getElementById("fishing").checked ? total : 0;
+    return days;
+
+}
+
+function calculateVoyageDays(
+    embarkDate,
+    disembarkDate
+) {
+
+    if (
+        !embarkDate ||
+        !disembarkDate
+    ) {
+        return 0;
+    }
+
+    const start =
+        new Date(
+            embarkDate
+        );
+
+    const end =
+        new Date(
+            disembarkDate
+        );
+
+    if (end < start) {
+
+        return 0;
+
+    }
+
+    return Math.floor(
+        (end - start) /
+        (1000 * 60 * 60 * 24)
+    ) + 1;
+
+}ked ? total : 0;
 }
