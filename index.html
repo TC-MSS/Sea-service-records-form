@@ -1,1 +1,328 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sea Service Records</title><link rel="stylesheet" href="css/app.css"></head><body><h1>Statement of Sea Service for a Certificate</h1><nav><a href="examiner.html">Examiner</a> | <a href="records.html">Records</a></nav><div id="app"></div><script src="js/app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Statement of Sea Service for a Certificate</title>
+
+<link rel="stylesheet" href="css/app.css">
+
+</head>
+
+<body>
+
+<header class="banner">
+
+<h1 id="title">
+Statement of Sea Service for a Certificate
+</h1>
+
+<select id="langSelector">
+<option value="en">English</option>
+<option value="fr">Français</option>
+</select>
+
+</header>
+
+<section class="formSection">
+
+<h2 id="applicantInfoTitle">
+Applicant Information
+</h2>
+
+<div class="grid2">
+
+<div>
+<label>Surname</label>
+<input id="surname">
+</div>
+
+<div>
+<label>Given Names</label>
+<input id="givenNames">
+</div>
+
+<div>
+<label>CDN Number</label>
+<input id="cdn">
+</div>
+
+<div>
+<label>Application Date</label>
+<input type="date" id="applicationDate">
+</div>
+
+<div>
+<label>Certificate Applied For</label>
+
+<select id="certificate">
+
+<option></option>
+
+<option>Watchkeeping Mate</option>
+
+<option>Master 150 GT</option>
+
+<option>Master 500 GT</option>
+
+<option>Master Near Coastal</option>
+
+<option>Chief Mate Near Coastal</option>
+
+<option>Chief Engineer</option>
+
+<option>Second Engineer</option>
+
+</select>
+
+</div>
+
+<div>
+<label>Certificate Held</label>
+<input id="certificateHeld">
+</div>
+
+</div>
+
+</section>
+
+<section>
+
+<h2>
+Sea Service Records
+</h2>
+
+<table id="serviceTable">
+
+<thead>
+
+<tr>
+
+<th>A<br>Rank</th>
+
+<th>B<br>Vessel</th>
+
+<th>C<br>Official / IMO</th>
+
+<th>D<br>Vessel Type</th>
+
+<th>E<br>kW</th>
+
+<th>F<br>Propulsion</th>
+
+<th>G<br>GT</th>
+
+<th>H<br>Voyage</th>
+
+<th>I<br>Registry</th>
+
+<th>J<br>Watch</th>
+
+<th>K<br>Embark</th>
+
+<th>L<br>Disembark</th>
+
+<th>M<br>Days</th>
+
+<th>Actions</th>
+
+</tr>
+
+</thead>
+
+<tbody id="recordsBody">
+</tbody>
+
+</table>
+
+<button onclick="addRecord()">
+Add Voyage
+</button>
+
+</section>
+
+<section>
+
+<h2>
+Special Operations
+</h2>
+
+<div class="checkboxGrid">
+
+<label>
+<input type="checkbox" id="polar">
+Polar Waters
+</label>
+
+<label>
+<input type="checkbox" id="ice">
+Acceptable Ice Waters
+</label>
+
+<label>
+<input type="checkbox" id="oil">
+Oil Transfer
+</label>
+
+<label>
+<input type="checkbox" id="chemical">
+Chemical Transfer
+</label>
+
+<label>
+<input type="checkbox" id="lng">
+LNG Transfer
+</label>
+
+<label>
+<input type="checkbox" id="lpg">
+LPG Transfer
+</label>
+
+<label>
+<input type="checkbox" id="sts">
+STS Transfer
+</label>
+
+<label>
+<input type="checkbox" id="dp">
+Dynamic Positioning
+</label>
+
+<label>
+<input type="checkbox" id="offshore">
+Offshore Operations
+</label>
+
+<label>
+<input type="checkbox" id="passenger">
+Passenger Operations
+</label>
+
+<label>
+<input type="checkbox" id="fishing">
+Fishing Operations
+</label>
+
+</div>
+
+</section>
+
+<section>
+
+<h2>
+Examiner Validation
+</h2>
+
+<div class="checkboxGrid">
+
+<label>
+<input type="checkbox">
+Voyage Verified
+</label>
+
+<label>
+<input type="checkbox">
+GT Verified
+</label>
+
+<label>
+<input type="checkbox">
+Position Verified
+</label>
+
+<label>
+<input type="checkbox">
+Embarkation Verified
+</label>
+
+<label>
+<input type="checkbox">
+Disembarkation Verified
+</label>
+
+<label>
+<input type="checkbox">
+Sea Service Verified
+</label>
+
+<label>
+<input type="checkbox">
+Accepted
+</label>
+
+<label>
+<input type="checkbox">
+Accepted with Adjustment
+</label>
+
+<label>
+<input type="checkbox">
+Rejected
+</label>
+
+</div>
+
+</section>
+
+<section>
+
+<h2>Status</h2>
+
+<div id="statusPanel">
+
+No validation issues.
+
+</div>
+
+</section>
+
+<section>
+
+<h2>Sea Service Summary</h2>
+
+<div class="summary">
+
+<div>Total Submitted Days:
+<span id="totalDays">0</span></div>
+
+<div>Eligible Days:
+<span id="acceptedDays">0</span></div>
+
+<div>Polar Days:
+<span id="polarDays">0</span></div>
+
+<div>Ice Days:
+<span id="iceDays">0</span></div>
+
+</div>
+
+</section>
+
+<section>
+
+<button onclick="calculateTotal()">
+Calculate Service
+</button>
+
+<button onclick="saveRecord()">
+Save
+</button>
+
+<button onclick="exportJson()">
+Export JSON
+</button>
+
+<button onclick="window.print()">
+Print
+</button>
+
+</section>
+
+<script src="js/app.js"></script>
+
+</body>
+</html>
+``
