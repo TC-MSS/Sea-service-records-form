@@ -59,3 +59,46 @@ const mprRequirementMatrix = {
         ]
     }
 };
+{
+    oicnwDays,
+
+    chiefMateDays,
+
+    masterDays,
+
+    chiefMateMasterDays,
+
+    bridgeWatchkeepingDays,
+
+    engineeringWatchkeepingDays,
+
+    fishingMasterDays,
+
+    outsideGreatLakesDays,
+
+    greatLakesDays,
+
+    voyage500NMDays,
+
+    gt60Days,
+
+    gt150Days,
+
+    gt500Days,
+
+    gt3000Days,
+
+    kw750Days,
+
+    kw3000Days,
+
+    kw4000Days,
+
+    nc1Days,
+
+    nc2Days,
+
+    unlimitedDays,
+
+    shelteredWatersDays
+}
