@@ -309,6 +309,38 @@ function calculateTotal() {
         calculator.buildSummary(
             voyages
         );
+
+    updateSummaryUI(
+    summary
+);
+    
+    const certificate =
+    document.getElementById(
+        "certificate"
+    ).value;
+
+const validation =
+    validateCertificateEligibility(
+        certificate,
+        voyages,
+        buildRecordObject()
+            .specialOperations
+    );
+
+const status =
+    buildValidationMessage(
+        validation
+    );
+
+document.getElementById(
+    "statusPanel"
+).className =
+    status.className;
+
+document.getElementById(
+    "statusPanel"
+).innerHTML =
+    status.message;
     const certificate =
     document.getElementById(
         "certificate"
@@ -384,10 +416,7 @@ document.getElementById(
     "unlimitedDays"
 ).textContent =
     summary.unlimitedDays || 0;
-    updateStatus(
-        warnings
-    );
-
+    
     if (
         typeof evaluateCertificateRequirements
         === "function"
@@ -566,6 +595,11 @@ function buildRecordObject() {
                     row.querySelector(
                         ".rank"
                     ).value,
+
+    kw:
+    row.querySelector(
+        ".kw"
+    ).value,
 
                 vessel:
                     row.querySelector(
