@@ -131,27 +131,116 @@ export class SeaServiceCalculator {
 
     calculateTotals(records) {
 
-        let totalOnboardDays = 0;
-        let totalQualifyingDays = 0;
+       const totals = {
 
-        records.forEach(record => {
+        totalOnboardDays: 0,
+        totalQualifyingDays: 0,
 
-            const result =
-                this.calculateQualifyingDays(
-                    record
-                );
+        service8Hour: 0,
+        service12Hour: 0,
 
-            totalOnboardDays +=
-                result.onboardDays;
+        captainDays: 0,
+        chiefOfficerDays: 0,
+        officerDays: 0,
 
-            totalQualifyingDays +=
-                result.qualifyingDays;
-        });
+        gt500Days: 0,
+        gt3000Days: 0,
 
-        return {
-            totalOnboardDays,
-            totalQualifyingDays
-        };
+        nearCoastalDays: 0,
+        unlimitedDays: 0
+    };
+
+    records.forEach(record => {
+
+        const result =
+            this.calculateQualifyingDays(record);
+
+        totals.totalOnboardDays +=
+            result.onboardDays;
+
+        totals.totalQualifyingDays +=
+            result.qualifyingDays;
+
+        const qualifyingDays =
+            result.qualifyingDays;
+
+        const watchHours =
+            Number(record.watchHours);
+
+        if (watchHours >= 12) {
+
+            totals.service12Hour +=
+                qualifyingDays;
+
+        } else {
+
+            totals.service8Hour +=
+                qualifyingDays;
+        }
+
+        const rank =
+            (record.rank || '')
+            .toLowerCase();
+
+        if (rank.includes('captain')) {
+
+            totals.captainDays +=
+                qualifyingDays;
+        }
+
+        if (
+            rank.includes('chief officer')
+        ) {
+
+            totals.chiefOfficerDays +=
+                qualifyingDays;
+        }
+
+        if (
+            rank.includes('officer')
+        ) {
+
+            totals.officerDays +=
+                qualifyingDays;
+        }
+
+        const gt =
+            Number(record.grossTonnage || 0);
+
+        if (gt >= 500) {
+
+            totals.gt500Days +=
+                qualifyingDays;
+        }
+
+        if (gt >= 3000) {
+
+            totals.gt3000Days +=
+                qualifyingDays;
+        }
+
+        const voyage =
+            (record.voyageClass || '')
+            .toLowerCase();
+
+        if (
+            voyage.includes('near')
+        ) {
+
+            totals.nearCoastalDays +=
+                qualifyingDays;
+        }
+
+        if (
+            voyage.includes('unlimited')
+        ) {
+
+            totals.unlimitedDays +=
+                qualifyingDays;
+        }
+    });
+
+    return totals;
     }
 
     buildSummary(records) {
