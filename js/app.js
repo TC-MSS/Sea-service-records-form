@@ -388,8 +388,6 @@ if (
 
         voyages.push({
 
-  voyages.push({
-
     rank:
         row.querySelector(
             ".rank"
@@ -465,7 +463,9 @@ if (
             ".offshore"
         )?.checked || false
 
-});         
+});      
+        
+});
 
 const overlapWarnings =
     detectOverlaps(
@@ -479,7 +479,7 @@ warnings.push(
 updateReviewFindings(
     warnings
 );
-        
+    
     const summary =
         calculator.buildSummary(
             voyages
