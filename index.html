@@ -237,12 +237,9 @@ Sea Service Records
   
 <th>Q<br>Offshore</th>
   
-<th>K<br>Embark</th>
-
-<th>L<br>Disembark</th>
-
-<th>M<br>Days</th>
-
+<th>R<br>Embark</th>
+<th>S<br>Disembark</th>
+<th>T<br>Days</th>
 <th>Actions</th>
 
 </tr>
@@ -344,8 +341,66 @@ No validation issues.
 
 </div>
 
+<h3>Service Review Findings</h3>
+
+<div id="reviewWarnings">
+
+No findings.
+
+</div>
+  
 </section>
 
+<section>
+
+<h2>
+Examiner Review Summary
+</h2>
+
+<div class="summaryGrid">
+
+<div class="summaryCard">
+
+<h3>Review Status</h3>
+
+<div>
+Records Reviewed:
+<span id="recordsReviewed">0</span>
+</div>
+
+<div>
+Outstanding Issues:
+<span id="outstandingIssues">0</span>
+</div>
+
+</div>
+
+<div class="summaryCard">
+
+<h3>Service Verification</h3>
+
+<div>
+Claimed Days:
+<span id="claimedDaysReview">0</span>
+</div>
+
+<div>
+Accepted Days:
+<span id="acceptedDaysReview">0</span>
+</div>
+
+<div>
+Adjusted Days:
+<span id="adjustedDaysReview">0</span>
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+  
 <section>
 
 <h2>
@@ -452,6 +507,21 @@ Fishing:
 </div>
 
 <div>
+Oil Tanker:
+<span id="oilDays">0</span>
+</div>
+
+<div>
+Chemical Tanker:
+<span id="chemicalDays">0</span>
+</div>
+
+<div>
+Gas Tanker:
+<span id="gasDays">0</span>
+</div>
+  
+<div>
 DP:
 <span id="dpDays">0</span>
 </div>
@@ -467,6 +537,22 @@ Offshore:
 
 </section>
 
+<section>
+
+<h2>
+Applicant Declaration
+</h2>
+
+<label>
+
+<input type="checkbox" id="applicantDeclaration">
+
+I certify that the information provided in this sea service record is accurate and complete.
+
+</label>
+
+</section>  
+  
 <section>
 
 <button onclick="calculateTotal()">
