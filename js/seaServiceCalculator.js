@@ -1,73 +1,182 @@
-/*
-=====================================================
-Sea Service Calculator
-Phase 3
-=====================================================
-*/
+/**
+ * Sea Service Calculator
+ * TP2293 / EXN2 calculations
+ */
 
-function calculateCreditedService(days, watchHours) {
+export class SeaServiceCalculator {
 
-    if (!days) {
-        return 0;
-    }
+    calculateOnboardDays(startDate, endDate) {
 
-    /*
-    Basic model
+        const start = new Date(startDate);
+        const end = new Date(endDate);
 
-    8-hour watch
-    credit = 1 x sea service
+        const msPerDay = 86400000;
 
-    12-hour watch
-    credit = 1.5 x sea service
-
-    Will be expanded later
-    with TP2293 logic.
-    */
-
-    if (parseInt(watchHours) === 12) {
-
-        return Math.round(
-            days * 1.5
+        return Math.max(
+            0,
+            Math.floor((end - start) / msPerDay)
         );
-
     }
 
-    return days;
+    calculateQualifyingDays(record) {
 
-}
+        const onboardDays =
+            this.calculateOnboardDays(
+                record.engagementDate,
+                record.dischargeDate
+            );
 
-function calculateVoyageDays(
-    embarkDate,
-    disembarkDate
-) {
+        const seaTime =
+            Number(record.seaTimeDays || 0);
 
-    if (
-        !embarkDate ||
-        !disembarkDate
-    ) {
-        return 0;
+        let qualifyingDays = 0;
+
+        switch (Number(record.watchHours)) {
+
+            case 8:
+
+                qualifyingDays =
+                    Math.min(
+                        onboardDays,
+                        seaTime * 1.5
+                    );
+
+                break;
+
+            case 9:
+
+                qualifyingDays =
+                    Math.min(
+                        onboardDays * 1.125,
+                        seaTime * 1.688
+                    );
+
+                break;
+
+            case 10:
+
+                qualifyingDays =
+                    Math.min(
+                        onboardDays * 1.25,
+                        seaTime * 1.875
+                    );
+
+                break;
+
+            case 11:
+
+                qualifyingDays =
+                    Math.min(
+                        onboardDays * 1.375,
+                        seaTime * 2.063
+                    );
+
+                break;
+
+            case 12:
+
+                qualifyingDays =
+                    Math.min(
+                        onboardDays * 1.5,
+                        seaTime * 2.25
+                    );
+
+                break;
+
+            default:
+
+                qualifyingDays = onboardDays;
+        }
+
+        return {
+            onboardDays,
+            qualifyingDays:
+                Math.round(qualifyingDays)
+        };
     }
 
-    const start =
-        new Date(
-            embarkDate
-        );
+    detectOverlaps(records) {
 
-    const end =
-        new Date(
-            disembarkDate
-        );
+        const overlaps = [];
 
-    if (end < start) {
+        for (let i = 0; i < records.length; i++) {
 
-        return 0;
+            for (
+                let j = i + 1;
+                j < records.length;
+                j++
+            ) {
 
+                const a = records[i];
+                const b = records[j];
+
+                if (
+                    new Date(a.engagementDate)
+                        <= new Date(b.dischargeDate)
+                    &&
+                    new Date(b.engagementDate)
+                        <= new Date(a.dischargeDate)
+                ) {
+
+                    overlaps.push({
+                        record1: i,
+                        record2: j
+                    });
+                }
+            }
+        }
+
+        return overlaps;
     }
 
-    return Math.floor(
-        (end - start) /
-        (1000 * 60 * 60 * 24)
-    ) + 1;
+    calculateTotals(records) {
 
-}ked ? total : 0;
+        let totalOnboardDays = 0;
+        let totalQualifyingDays = 0;
+
+        records.forEach(record => {
+
+            const result =
+                this.calculateQualifyingDays(
+                    record
+                );
+
+            totalOnboardDays +=
+                result.onboardDays;
+
+            totalQualifyingDays +=
+                result.qualifyingDays;
+        });
+
+        return {
+            totalOnboardDays,
+            totalQualifyingDays
+        };
+    }
+
+    buildSummary(records) {
+
+        const totals =
+            this.calculateTotals(records);
+
+        const overlaps =
+            this.detectOverlaps(records);
+
+        return {
+
+            totalRecords:
+                records.length,
+
+            totalOnboardDays:
+                totals.totalOnboardDays,
+
+            totalQualifyingDays:
+                totals.totalQualifyingDays,
+
+            overlapCount:
+                overlaps.length,
+
+            overlaps
+        };
+    }
 }
