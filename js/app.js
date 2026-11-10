@@ -124,6 +124,34 @@ onchange="calculateTotal()">
 </td>
 
 <td>
+<input type="checkbox" class="polar">
+</td>
+
+<td>
+<input type="checkbox" class="ice">
+</td>
+
+<td>
+<input type="checkbox" class="passenger">
+</td>
+
+<td>
+<input type="checkbox" class="tanker">
+</td>
+
+<td>
+<input type="checkbox" class="fishing">
+</td>
+
+<td>
+<input type="checkbox" class="dp">
+</td>
+
+<td>
+<input type="checkbox" class="offshore">
+</td>
+
+<td>
 <input
 type="date"
 class="disembark"
@@ -158,6 +186,65 @@ function deleteRow(button) {
 
     calculateTotal();
 }
+if (
+    document.getElementById(
+        "claimedDaysReview"
+    )
+)
+{
+    document.getElementById(
+        "claimedDaysReview"
+    ).textContent =
+        summary.totalOnboardDays || 0;
+}
+
+if (
+    document.getElementById(
+        "acceptedDaysReview"
+    )
+)
+{
+    document.getElementById(
+        "acceptedDaysReview"
+    ).textContent =
+        summary.totalQualifyingDays || 0;
+}
+
+if (
+    document.getElementById(
+        "adjustedDaysReview"
+    )
+)
+{
+    document.getElementById(
+        "adjustedDaysReview"
+    ).textContent = 0;
+}
+
+if (
+    document.getElementById(
+        "recordsReviewed"
+    )
+)
+{
+    document.getElementById(
+        "recordsReviewed"
+    ).textContent =
+        voyages.length;
+}
+
+if (
+    document.getElementById(
+        "outstandingIssues"
+    )
+)
+{
+    document.getElementById(
+        "outstandingIssues"
+    ).textContent =
+        warnings.length;
+}
+
 
 // =====================================================
 // Calculate Voyage Days
@@ -192,6 +279,86 @@ function calculateVoyageDays(
 // =====================================================
 // Main Calculation
 // =====================================================
+
+function updateReviewFindings(warnings)
+{
+    const panel =
+        document.getElementById(
+            "reviewWarnings"
+        );
+
+    if (!panel)
+    {
+        return;
+    }
+
+    if (warnings.length === 0)
+    {
+        panel.innerHTML =
+            "No findings.";
+        return;
+    }
+
+    panel.innerHTML =
+        warnings.join("<br>");
+}
+
+function detectOverlaps(
+    voyages
+)
+{
+    const warnings = [];
+
+    for (
+        let i = 0;
+        i < voyages.length;
+        i++
+    )
+    {
+        for (
+            let j = i + 1;
+            j < voyages.length;
+            j++
+        )
+        {
+            const startA =
+                new Date(
+                    voyages[i]
+                        .engagementDate
+                );
+
+            const endA =
+                new Date(
+                    voyages[i]
+                        .dischargeDate
+                );
+
+            const startB =
+                new Date(
+                    voyages[j]
+                        .engagementDate
+                );
+
+            const endB =
+                new Date(
+                    voyages[j]
+                        .dischargeDate
+                );
+
+            if (
+                startA <= endB &&
+                endA >= startB
+            )
+            {
+                warnings.push(
+                    `Possible overlap between voyage ${i + 1} and voyage ${j + 1}.`
+                );
+            }
+        }
+    }
+
+    return warnings;
+}
 
 function calculateTotal() {
 
@@ -242,6 +409,37 @@ function calculateTotal() {
                 disembark
             );
 
+const gt =
+    row.querySelector(
+        ".gt"
+    ).value;
+
+const kw =
+    row.querySelector(
+        ".kw"
+    ).value;
+
+if (!gt)
+{
+    warnings.push(
+        "Missing GT value."
+    );
+}
+
+if (
+    row.querySelector(
+        ".rank"
+    ).value.includes(
+        "Engineer"
+    ) &&
+    !kw
+)
+{
+    warnings.push(
+        "Missing kW value for engineering service."
+    );
+}
+        
         row.querySelector(
             ".daysCell"
         ).textContent =
@@ -249,62 +447,98 @@ function calculateTotal() {
 
         voyages.push({
 
-            rank:
-                row.querySelector(
-                    ".rank"
-                ).value,
+  voyages.push({
 
-            grossTonnage:
-                row.querySelector(
-                    ".gt"
-                ).value,
+    rank:
+        row.querySelector(
+            ".rank"
+        ).value,
 
-            voyageClass:
-                row.querySelector(
-                    ".voyage"
-                ).value,
+    grossTonnage:
+        Number(
+            row.querySelector(
+                ".gt"
+            ).value || 0
+        ),
 
-            watchHours:
-                row.querySelector(
-                    ".watch"
-                ).value,
+    voyageClass:
+        row.querySelector(
+            ".voyage"
+        ).value,
 
-            engagementDate:
-                embark,
+    watchHours:
+        Number(
+            row.querySelector(
+                ".watch"
+            ).value || 8
+        ),
 
-            dischargeDate:
-                disembark,
+    engagementDate:
+        embark,
 
-            seaTimeDays:
-                seaTimeDays,
+    dischargeDate:
+        disembark,
 
-            polarWaters:
-                document.getElementById(
-                    "polar"
-                )?.checked || false,
+    seaTimeDays:
+        seaTimeDays,
 
-            iceNavigation:
-                document.getElementById(
-                    "ice"
-                )?.checked || false,
+    kw:
+        Number(
+            row.querySelector(
+                ".kw"
+            ).value || 0
+        ),
 
-            oilTanker:
-                document.getElementById(
-                    "oil"
-                )?.checked || false,
+    polarWaters:
+        row.querySelector(
+            ".polar"
+        )?.checked || false,
 
-            chemicalTanker:
-                document.getElementById(
-                    "chemical"
-                )?.checked || false,
+    iceNavigation:
+        row.querySelector(
+            ".ice"
+        )?.checked || false,
 
-            lngTanker:
-                document.getElementById(
-                    "lng"
-                )?.checked || false
-        });
-    });
+    passengerService:
+        row.querySelector(
+            ".passenger"
+        )?.checked || false,
 
+    tankerService:
+        row.querySelector(
+            ".tanker"
+        )?.checked || false,
+
+    fishingService:
+        row.querySelector(
+            ".fishing"
+        )?.checked || false,
+
+    dynamicPositioning:
+        row.querySelector(
+            ".dp"
+        )?.checked || false,
+
+    offshoreService:
+        row.querySelector(
+            ".offshore"
+        )?.checked || false
+
+});         
+
+const overlapWarnings =
+    detectOverlaps(
+        voyages
+    );
+
+warnings.push(
+    ...overlapWarnings
+);
+
+updateReviewFindings(
+    warnings
+);
+        
     const summary =
         calculator.buildSummary(
             voyages
@@ -566,10 +800,10 @@ function buildRecordObject() {
                         ".rank"
                     ).value,
 
-    kw:
-    row.querySelector(
-        ".kw"
-    ).value,
+                kw:
+                    row.querySelector(
+                        ".kw"
+                    ).value,
 
                 vessel:
                     row.querySelector(
@@ -604,8 +838,45 @@ function buildRecordObject() {
                 days:
                     row.querySelector(
                         ".daysCell"
-                    ).textContent
+                    ).textContent,
+
+                polar:
+                    row.querySelector(
+                        ".polar"
+                    )?.checked || false,
+
+                ice:
+                    row.querySelector(
+                        ".ice"
+                    )?.checked || false,
+
+                passenger:
+                    row.querySelector(
+                        ".passenger"
+                    )?.checked || false,
+
+                tanker:
+                    row.querySelector(
+                        ".tanker"
+                    )?.checked || false,
+
+                fishing:
+                    row.querySelector(
+                        ".fishing"
+                    )?.checked || false,
+
+                dp:
+                    row.querySelector(
+                        ".dp"
+                    )?.checked || false,
+
+                offshore:
+                    row.querySelector(
+                        ".offshore"
+                    )?.checked || false
+
             });
+
         });
 
     return {
@@ -630,41 +901,15 @@ function buildRecordObject() {
                 "certificate"
             ).value,
 
-        voyages,
+        certificateHeld:
+            document.getElementById(
+                "certificateHeld"
+            ).value,
 
-        specialOperations: {
+        voyages
 
-            polar:
-                document.getElementById(
-                    "polar"
-                ).checked,
-
-            ice:
-                document.getElementById(
-                    "ice"
-                ).checked,
-
-            oil:
-                document.getElementById(
-                    "oil"
-                ).checked,
-
-            chemical:
-                document.getElementById(
-                    "chemical"
-                ).checked,
-
-            lng:
-                document.getElementById(
-                    "lng"
-                ).checked,
-
-            lpg:
-                document.getElementById(
-                    "lpg"
-                ).checked
-        }
     };
+
 }
 
 // =====================================================
