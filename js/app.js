@@ -186,65 +186,6 @@ function deleteRow(button) {
 
     calculateTotal();
 }
-if (
-    document.getElementById(
-        "claimedDaysReview"
-    )
-)
-{
-    document.getElementById(
-        "claimedDaysReview"
-    ).textContent =
-        summary.totalOnboardDays || 0;
-}
-
-if (
-    document.getElementById(
-        "acceptedDaysReview"
-    )
-)
-{
-    document.getElementById(
-        "acceptedDaysReview"
-    ).textContent =
-        summary.totalQualifyingDays || 0;
-}
-
-if (
-    document.getElementById(
-        "adjustedDaysReview"
-    )
-)
-{
-    document.getElementById(
-        "adjustedDaysReview"
-    ).textContent = 0;
-}
-
-if (
-    document.getElementById(
-        "recordsReviewed"
-    )
-)
-{
-    document.getElementById(
-        "recordsReviewed"
-    ).textContent =
-        voyages.length;
-}
-
-if (
-    document.getElementById(
-        "outstandingIssues"
-    )
-)
-{
-    document.getElementById(
-        "outstandingIssues"
-    ).textContent =
-        warnings.length;
-}
-
 
 // =====================================================
 // Calculate Voyage Days
