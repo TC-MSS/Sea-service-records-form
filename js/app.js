@@ -313,7 +313,50 @@ function calculateTotal() {
     updateSummaryUI(
         summary
     );
+document.getElementById(
+    "service8Hours"
+).textContent =
+    summary.service8Hour || 0;
 
+document.getElementById(
+    "service12Hours"
+).textContent =
+    summary.service12Hour || 0;
+
+document.getElementById(
+    "captainDays"
+).textContent =
+    summary.captainDays || 0;
+
+document.getElementById(
+    "chiefOfficerDays"
+).textContent =
+    summary.chiefOfficerDays || 0;
+
+document.getElementById(
+    "officerDays"
+).textContent =
+    summary.officerDays || 0;
+
+document.getElementById(
+    "gt500Days"
+).textContent =
+    summary.gt500Days || 0;
+
+document.getElementById(
+    "gt3000Days"
+).textContent =
+    summary.gt3000Days || 0;
+
+document.getElementById(
+    "nearCoastalDays"
+).textContent =
+    summary.nearCoastalDays || 0;
+
+document.getElementById(
+    "unlimitedDays"
+).textContent =
+    summary.unlimitedDays || 0;
     updateStatus(
         warnings
     );
