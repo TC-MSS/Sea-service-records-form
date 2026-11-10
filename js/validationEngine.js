@@ -306,3 +306,8 @@ function buildValidationMessage(
             )
     };
 }
+window.validateCertificateEligibility =
+    validateCertificateEligibility;
+
+window.buildValidationMessage =
+    buildValidationMessage;
