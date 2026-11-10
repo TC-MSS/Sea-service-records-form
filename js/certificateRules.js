@@ -2,418 +2,339 @@
 =====================================================
 Certificate Rules Engine
 Sea Service Records Project
-Version 1
+Phase 3
 =====================================================
 */
 
 const certificateRules = {
 
     /*
-    ============================================
+    =====================================================
     DECK CERTIFICATES
-    ============================================
+    =====================================================
     */
 
-    "Watchkeeping Mate": {
-
+    "Master Mariner": {
         department: "Deck",
+        minimumGT: 500,
+        acceptedVoyages: ["Unlimited"],
+        acceptedPositions: ["Chief Mate", "Master"],
+        specialRequirements: {}
+    },
 
+    "Master, Near Coastal": {
+        department: "Deck",
+        minimumGT: 500,
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Mate", "Chief Mate", "Master"],
+        specialRequirements: {}
+    },
+
+    "Master 3 000 Gross Tonnage, Near Coastal": {
+        department: "Deck",
+        minimumGT: 3000,
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Chief Mate", "Master"],
+        specialRequirements: {}
+    },
+
+    "Master 500 Gross Tonnage, Near Coastal": {
+        department: "Deck",
+        minimumGT: 500,
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Mate", "Chief Mate", "Master"],
+        specialRequirements: {}
+    },
+
+    "Master 3 000 Gross Tonnage, Domestic": {
+        department: "Deck",
+        minimumGT: 3000,
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Chief Mate", "Master"],
+        specialRequirements: {}
+    },
+
+    "Master 500 Gross Tonnage, Domestic": {
+        department: "Deck",
+        minimumGT: 500,
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Mate", "Chief Mate", "Master"],
+        specialRequirements: {}
+    },
+
+    "Master 150 Gross Tonnage, Domestic": {
+        department: "Deck",
+        minimumGT: 150,
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Mate", "Chief Mate", "Master"],
+        specialRequirements: {}
+    },
+
+    "Master, Limited": {
+        department: "Deck",
+        minimumGT: 0,
+        acceptedVoyages: ["Sheltered Waters", "NC2"],
+        acceptedPositions: ["Mate", "Master"],
+        specialRequirements: {}
+    },
+
+    "Chief Mate": {
+        department: "Deck",
+        minimumGT: 500,
+        acceptedVoyages: ["Unlimited"],
+        acceptedPositions: ["Mate", "Chief Mate"],
+        specialRequirements: {}
+    },
+
+    "Chief Mate, Near Coastal": {
+        department: "Deck",
+        minimumGT: 500,
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Mate", "Chief Mate"],
+        specialRequirements: {}
+    },
+
+    "Watchkeeping Mate": {
+        department: "Deck",
         minimumGT: 60,
-
         acceptedVoyages: [
             "NC1",
             "NC2",
             "Unlimited"
         ],
-
         acceptedPositions: [
             "Deck Cadet",
             "Bridge Watch Rating",
             "Able Seafarer Deck"
         ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
+        specialRequirements: {}
     },
 
-    "Master 150 GT": {
-
+    "Watchkeeping Mate, Near Coastal": {
         department: "Deck",
-
-        minimumGT: 150,
-
+        minimumGT: 60,
         acceptedVoyages: [
             "NC1",
             "NC2"
         ],
-
         acceptedPositions: [
-            "Mate",
-            "Chief Mate",
-            "Master"
+            "Deck Cadet",
+            "Bridge Watch Rating",
+            "Able Seafarer Deck"
         ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
+        specialRequirements: {}
     },
 
-    "Master 500 GT": {
-
+    "Chief Mate 500 Gross Tonnage, Domestic": {
         department: "Deck",
-
         minimumGT: 500,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Mate",
-            "Chief Mate",
-            "Master"
-        ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Mate", "Chief Mate"],
+        specialRequirements: {}
     },
 
-    "Chief Mate Near Coastal": {
-
+    "Chief Mate 150 Gross Tonnage, Domestic": {
         department: "Deck",
-
-        minimumGT: 500,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Mate",
-            "Chief Mate"
-        ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
+        minimumGT: 150,
+        acceptedVoyages: ["NC1", "NC2"],
+        acceptedPositions: ["Mate", "Chief Mate"],
+        specialRequirements: {}
     },
 
-    "Master Near Coastal": {
-
+    "Chief Mate, Limited": {
         department: "Deck",
-
-        minimumGT: 500,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Mate",
-            "Chief Mate",
-            "Master"
-        ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
+        minimumGT: 0,
+        acceptedVoyages: ["Sheltered Waters", "NC2"],
+        acceptedPositions: ["Mate", "Chief Mate"],
+        specialRequirements: {}
     },
 
     /*
-    ============================================
-    ENGINE CERTIFICATES
-    ============================================
+    =====================================================
+    FISHING CERTIFICATES
+    =====================================================
     */
 
-    "Fourth-Class Engineer": {
+    "Fishing Master, First Class": {
+        department: "Fishing"
+    },
 
+    "Fishing Master, Second Class": {
+        department: "Fishing"
+    },
+
+    "Fishing Master, Third Class": {
+        department: "Fishing"
+    },
+
+    "Fishing Master, Fourth Class": {
+        department: "Fishing"
+    },
+
+    "Certificate of Service as Master of a Fishing Vessel of Less Than 60 Gross Tonnage": {
+        department: "Fishing"
+    },
+
+    /*
+    =====================================================
+    ENGINEER CERTIFICATES
+    =====================================================
+    */
+
+    "First-class Engineer, Motor Ship": {
         department: "Engine",
-
         minimumKW: 750,
+        acceptedVoyages: ["NC1", "NC2", "Unlimited"],
+        acceptedPositions: [
+            "Chief Engineer",
+            "Engineer Officer"
+        ],
+        specialRequirements: {}
+    },
 
+    "First-class Engineer, Steamship": {
+        department: "Engine",
+        minimumKW: 750,
+        acceptedVoyages: ["NC1", "NC2", "Unlimited"],
+        acceptedPositions: [
+            "Chief Engineer",
+            "Engineer Officer"
+        ],
+        specialRequirements: {}
+    },
+
+    "Second-class Engineer, Motor Ship": {
+        department: "Engine",
+        minimumKW: 750,
+        acceptedVoyages: ["NC1", "NC2", "Unlimited"],
+        acceptedPositions: [
+            "Second Engineer",
+            "Engineer Officer"
+        ],
+        specialRequirements: {}
+    },
+
+    "Second-class Engineer, Steamship": {
+        department: "Engine",
+        minimumKW: 750,
+        acceptedVoyages: ["NC1", "NC2", "Unlimited"],
+        acceptedPositions: [
+            "Second Engineer",
+            "Engineer Officer"
+        ],
+        specialRequirements: {}
+    },
+
+    "Third-class Engineer, Motor Ship": {
+        department: "Engine",
+        minimumKW: 750,
+        acceptedVoyages: ["NC1", "NC2", "Unlimited"],
+        acceptedPositions: [
+            "Engineer Officer"
+        ],
+        specialRequirements: {}
+    },
+
+    "Third-class Engineer, Steamship": {
+        department: "Engine",
+        minimumKW: 750,
+        acceptedVoyages: ["NC1", "NC2", "Unlimited"],
+        acceptedPositions: [
+            "Engineer Officer"
+        ],
+        specialRequirements: {}
+    },
+
+    "Fourth-class Engineer, Motor Ship": {
+        department: "Engine",
+        minimumKW: 750,
         acceptedVoyages: [
             "NC1",
             "NC2",
             "Unlimited",
             "Sheltered Waters"
         ],
-
         acceptedPositions: [
             "Engineer Cadet",
             "Engineer Officer"
         ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
+        specialRequirements: {}
     },
 
-    "Third-Class Engineer": {
-
+    "Fourth-class Engineer, Steamship": {
         department: "Engine",
-
         minimumKW: 750,
-
         acceptedVoyages: [
             "NC1",
             "NC2",
-            "Unlimited"
+            "Unlimited",
+            "Sheltered Waters"
         ],
-
         acceptedPositions: [
-            "Engineer Officer",
-            "Second Engineer"
-        ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
-    },
-
-    "Second Engineer": {
-
-        department: "Engine",
-
-        minimumKW: 750,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Second Engineer",
+            "Engineer Cadet",
             "Engineer Officer"
         ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
+        specialRequirements: {}
     },
 
-    "Chief Engineer": {
+    "Watchkeeping Engineer, Motor-driven Fishing Vessel": {
+        department: "Engine"
+    },
 
-        department: "Engine",
-
-        minimumKW: 750,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Chief Engineer"
-        ],
-
-        specialRequirements: {
-            polar: false,
-            ice: false,
-            oilTransfer: false,
-            chemicalTransfer: false,
-            lngTransfer: false
-        }
-
+    "Small Vessel Machinery Operator": {
+        department: "Engine"
     },
 
     /*
-    ============================================
-    SPECIALIZED OPERATIONS
-    ============================================
+    =====================================================
+    PROFICIENCY CERTIFICATES
+    =====================================================
     */
 
-    "Advanced Oil Tanker Endorsement": {
+    "Proficiency in Survival Craft and Rescue Boats Other Than Fast Rescue Boats": {
+        department: "STCW"
+    },
 
-        department: "Deck",
-
-        minimumGT: 0,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Mate",
-            "Chief Mate",
-            "Master",
-            "Engineer Officer",
-            "Chief Engineer"
-        ],
-
+    "Supervisor of an Oil Transfer Operation": {
+        department: "STCW",
         specialRequirements: {
+            oilTransfer: true
+        }
+    },
 
-            polar: false,
-
-            ice: false,
-
+    "Supervisor of an Oil Transfer Operation in Arctic Waters (North of 60° N)": {
+        department: "STCW",
+        specialRequirements: {
             oilTransfer: true,
-
-            chemicalTransfer: false,
-
-            lngTransfer: false
-
+            polar: true
         }
-
     },
 
-    "Advanced Chemical Tanker Endorsement": {
-
-        department: "Deck",
-
-        minimumGT: 0,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Mate",
-            "Chief Mate",
-            "Master",
-            "Engineer Officer",
-            "Chief Engineer"
-        ],
-
+    "Supervisor of a Chemical Transfer Operation": {
+        department: "STCW",
         specialRequirements: {
-
-            polar: false,
-
-            ice: false,
-
-            oilTransfer: false,
-
-            chemicalTransfer: true,
-
-            lngTransfer: false
-
+            chemicalTransfer: true
         }
-
     },
 
-    "Advanced LNG Tanker Endorsement": {
-
-        department: "Deck",
-
-        minimumGT: 0,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Mate",
-            "Chief Mate",
-            "Master",
-            "Engineer Officer",
-            "Chief Engineer"
-        ],
-
+    "Supervisor of a Liquefied Gas Transfer Operation": {
+        department: "STCW",
         specialRequirements: {
-
-            polar: false,
-
-            ice: false,
-
-            oilTransfer: false,
-
-            chemicalTransfer: false,
-
             lngTransfer: true
-
         }
-
     },
 
-    "Polar Waters Endorsement": {
+    "Able Seafarer": {
+        department: "Deck"
+    },
 
-        department: "Deck",
+    "Bridge Watch Rating": {
+        department: "Deck"
+    },
 
-        minimumGT: 0,
-
-        acceptedVoyages: [
-            "NC1",
-            "NC2",
-            "Unlimited"
-        ],
-
-        acceptedPositions: [
-            "Mate",
-            "Chief Mate",
-            "Master"
-        ],
-
-        specialRequirements: {
-
-            polar: true,
-
-            ice: true,
-
-            oilTransfer: false,
-
-            chemicalTransfer: false,
-
-            lngTransfer: false
-
-        }
-
+    "Engine-room Rating": {
+        department: "Engine"
     }
-
 };
 
 /*
@@ -422,44 +343,61 @@ Helper Functions
 =====================================================
 */
 
-function getCertificateRule(certificateName) {
-
-    return certificateRules[certificateName] || null;
-
+function getCertificateRule(
+    certificateName
+) {
+    return certificateRules[
+        certificateName
+    ] || null;
 }
 
-function certificateExists(certificateName) {
-
-    return certificateRules.hasOwnProperty(
+function certificateExists(
+    certificateName
+) {
+    return Object.prototype.hasOwnProperty.call(
+        certificateRules,
         certificateName
     );
-
 }
 
 function listCertificates() {
-
     return Object.keys(
         certificateRules
     );
-
 }
 
 function listDeckCertificates() {
-
     return Object.keys(
         certificateRules
     ).filter(c =>
-        certificateRules[c].department === "Deck"
+        certificateRules[c]
+            .department === "Deck"
     );
-
 }
 
 function listEngineCertificates() {
-
     return Object.keys(
         certificateRules
     ).filter(c =>
-        certificateRules[c].department === "Engine"
+        certificateRules[c]
+            .department === "Engine"
     );
+}
 
+function listFishingCertificates() {
+    return Object.keys(
+        certificateRules
+    ).filter(c =>
+        certificateRules[c]
+            .department === "Fishing"
+    );
+}
+
+function listStcwCertificates() {
+    return Object.keys(
+        certificateRules
+    ).filter(c =>
+        certificateRules[c]
+            .department === "STCW"
+    );
 }
