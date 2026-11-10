@@ -1,6 +1,17 @@
 // =====================================================
 // Sea Service Record Application
-// Phase 1
+// Phase 3
+// =====================================================
+
+import {
+    SeaServiceCalculator
+} from "./seaServiceCalculator.js";
+
+const calculator =
+    new SeaServiceCalculator();
+
+// =====================================================
+// Startup
 // =====================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -11,8 +22,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document
         .getElementById("langSelector")
-        .addEventListener("change", switchLanguage);
-
+        .addEventListener(
+            "change",
+            switchLanguage
+        );
 });
 
 // =====================================================
@@ -22,13 +35,14 @@ document.addEventListener("DOMContentLoaded", () => {
 function addRecord() {
 
     const tbody =
-        document.getElementById("recordsBody");
+        document.getElementById(
+            "recordsBody"
+        );
 
     const row =
         document.createElement("tr");
 
     row.innerHTML = `
-
 <td>
 <select class="rank">
 <option></option>
@@ -96,7 +110,7 @@ function addRecord() {
 </td>
 
 <td>
-<select class="watch">
+<select class="watch" onchange="calculateTotal()">
 <option>8</option>
 <option>12</option>
 </select>
@@ -127,46 +141,63 @@ onclick="deleteRow(this)">
 Delete
 </button>
 </td>
-
 `;
 
     tbody.appendChild(row);
-
 }
 
 // =====================================================
-// Remove Row
+// Delete Row
 // =====================================================
 
 function deleteRow(button) {
 
-    const row =
-        button.closest("tr");
-
-    row.remove();
+    button
+        .closest("tr")
+        .remove();
 
     calculateTotal();
-
 }
 
 // =====================================================
-// Calculate Service
+// Calculate Voyage Days
+// =====================================================
+
+function calculateVoyageDays(
+    embark,
+    disembark
+) {
+
+    const start =
+        new Date(embark);
+
+    const end =
+        new Date(disembark);
+
+    return (
+        Math.floor(
+            (
+                end - start
+            ) /
+            (
+                1000 *
+                60 *
+                60 *
+                24
+            )
+        ) + 1
+    );
+}
+
+// =====================================================
+// Main Calculation
 // =====================================================
 
 function calculateTotal() {
 
-    let totalDays = 0;
-    let acceptedDays = 0;
-    acceptedDays += creditedDays;
-    document.getElementById(
-2
-"acceptedDays"
-3
-).textContent =
-4
-acceptedDays;
+    const warnings = [];
 
-    let warnings = [];
+    const voyages = [];
 
     const rows =
         document.querySelectorAll(
@@ -176,118 +207,226 @@ acceptedDays;
     rows.forEach(row => {
 
         const embark =
-            row.querySelector(".embark").value;
+            row.querySelector(
+                ".embark"
+            ).value;
 
         const disembark =
-            row.querySelector(".disembark").value;
+            row.querySelector(
+                ".disembark"
+            ).value;
 
-        if (!embark || !disembark)
+        if (
+            !embark ||
+            !disembark
+        ) {
             return;
+        }
 
-        const start =
-            new Date(embark);
-
-        const end =
-            new Date(disembark);
-
-        if (end < start) {
+        if (
+            new Date(disembark)
+            <
+            new Date(embark)
+        ) {
 
             warnings.push(
                 "Disembarkation date before embarkation date."
             );
 
-            row.querySelector(
-                ".daysCell"
-            ).textContent = "0";
-
             return;
-
         }
 
-        const watchHours =
-    row.querySelector(
-        ".watch"
-    ).value;
-
-const days =
-    calculateVoyageDays(
-        embark,
-        disembark
-    );
-
-const creditedDays =
-    calculateCreditedService(
-        days,
-        watchHours
-    );
-
-row.querySelector(
-    ".daysCell"
-).textContent =
-    creditedDays;
-                (1000 * 60 * 60 * 24)
-            ) + 1;
+        const seaTimeDays =
+            calculateVoyageDays(
+                embark,
+                disembark
+            );
 
         row.querySelector(
             ".daysCell"
-        ).textContent = days;
+        ).textContent =
+            seaTimeDays;
 
-        totalDays += days;
+        voyages.push({
 
+            rank:
+                row.querySelector(
+                    ".rank"
+                ).value,
+
+            grossTonnage:
+                row.querySelector(
+                    ".gt"
+                ).value,
+
+            voyageClass:
+                row.querySelector(
+                    ".voyage"
+                ).value,
+
+            watchHours:
+                row.querySelector(
+                    ".watch"
+                ).value,
+
+            engagementDate:
+                embark,
+
+            dischargeDate:
+                disembark,
+
+            seaTimeDays:
+                seaTimeDays,
+
+            polarWaters:
+                document.getElementById(
+                    "polar"
+                )?.checked || false,
+
+            iceNavigation:
+                document.getElementById(
+                    "ice"
+                )?.checked || false,
+
+            oilTanker:
+                document.getElementById(
+                    "oil"
+                )?.checked || false,
+
+            chemicalTanker:
+                document.getElementById(
+                    "chemical"
+                )?.checked || false,
+
+            lngTanker:
+                document.getElementById(
+                    "lng"
+                )?.checked || false
+        });
     });
 
-    document.getElementById(
-        "totalDays"
-    ).textContent = totalDays;
+    const summary =
+        calculator.buildSummary(
+            voyages
+        );
 
-    document.getElementById(
-        "acceptedDays"
-    ).textContent = totalDays;
+    updateSummaryUI(
+        summary
+    );
 
-   function updateSpecialServiceSummary(total) {
-
-    document.getElementById("polarDays").textContent =
-        document.getElementById("polar").checked ? total : 0;
-
-    document.getElementById("iceDays").textContent =
-        document.getElementById("ice").checked ? total : 0;
-
-    document.getElementById("oilDays").textContent =
-        document.getElementById("oil").checked ? total : 0;
-
-    document.getElementById("chemicalDays").textContent =
-        document.getElementById("chemical").checked ? total : 0;
-
-    document.getElementById("lngDays").textContent =
-        document.getElementById("lng").checked ? total : 0;
-
-    document.getElementById("lpgDays").textContent =
-        document.getElementById("lpg").checked ? total : 0;
-
-    document.getElementById("dpDays").textContent =
-        document.getElementById("dp").checked ? total : 0;
-
-    document.getElementById("offshoreDays").textContent =
-        document.getElementById("offshore").checked ? total : 0;
-
-    document.getElementById("passengerDays").textContent =
-        document.getElementById("passenger").checked ? total : 0;
-
-    document.getElementById("fishingDays").textContent =
-        document.getElementById("fishing").checked ? total : 0;
-}
     updateStatus(
         warnings
     );
 
-    evaluateCertificateRequirements();
+    if (
+        typeof evaluateCertificateRequirements
+        === "function"
+    ) {
+
+        evaluateCertificateRequirements();
+    }
+}
+
+// =====================================================
+// Summary Panel
+// =====================================================
+
+function updateSummaryUI(
+    summary
+) {
+
+    if (
+        document.getElementById(
+            "totalDays"
+        )
+    ) {
+
+        document.getElementById(
+            "totalDays"
+        ).textContent =
+            summary.totalOnboardDays;
+    }
+
+    if (
+        document.getElementById(
+            "acceptedDays"
+        )
+    ) {
+
+        document.getElementById(
+            "acceptedDays"
+        ).textContent =
+            summary.totalQualifyingDays;
+    }
+
+    if (
+        document.getElementById(
+            "polarDays"
+        )
+    ) {
+
+        document.getElementById(
+            "polarDays"
+        ).textContent =
+            summary.polarDays || 0;
+    }
+
+    if (
+        document.getElementById(
+            "iceDays"
+        )
+    ) {
+
+        document.getElementById(
+            "iceDays"
+        ).textContent =
+            summary.iceNavigationDays || 0;
+    }
+
+    if (
+        document.getElementById(
+            "oilDays"
+        )
+    ) {
+
+        document.getElementById(
+            "oilDays"
+        ).textContent =
+            summary.oilTankerDays || 0;
+    }
+
+    if (
+        document.getElementById(
+            "chemicalDays"
+        )
+    ) {
+
+        document.getElementById(
+            "chemicalDays"
+        ).textContent =
+            summary.chemicalTankerDays || 0;
+    }
+
+    if (
+        document.getElementById(
+            "lngDays"
+        )
+    ) {
+
+        document.getElementById(
+            "lngDays"
+        ).textContent =
+            summary.lngTankerDays || 0;
+    }
 }
 
 // =====================================================
 // Status Panel
 // =====================================================
 
-function updateStatus(warnings) {
+function updateStatus(
+    warnings
+) {
 
     const panel =
         document.getElementById(
@@ -308,7 +447,6 @@ function updateStatus(warnings) {
             "Record validated successfully.";
 
         return;
-
     }
 
     panel.classList.add(
@@ -317,31 +455,6 @@ function updateStatus(warnings) {
 
     panel.innerHTML =
         warnings.join("<br>");
-
-}
-
-// =====================================================
-// Summary
-// =====================================================
-
-function updateSpecialServiceSummary(
-    total
-) {
-
-    document.getElementById(
-        "polarDays"
-    ).textContent =
-        document.getElementById(
-            "polar"
-        ).checked ? total : 0;
-
-    document.getElementById(
-        "iceDays"
-    ).textContent =
-        document.getElementById(
-            "ice"
-        ).checked ? total : 0;
-
 }
 
 // =====================================================
@@ -361,7 +474,6 @@ function saveRecord() {
     alert(
         "Record saved successfully."
     );
-
 }
 
 // =====================================================
@@ -419,9 +531,7 @@ function buildRecordObject() {
                     row.querySelector(
                         ".daysCell"
                     ).textContent
-
             });
-
         });
 
     return {
@@ -446,7 +556,7 @@ function buildRecordObject() {
                 "certificate"
             ).value,
 
-        voyages: voyages,
+        voyages,
 
         specialOperations: {
 
@@ -479,15 +589,12 @@ function buildRecordObject() {
                 document.getElementById(
                     "lpg"
                 ).checked
-
         }
-
     };
-
 }
 
 // =====================================================
-// Restore Saved Record
+// Restore
 // =====================================================
 
 function restoreSavedRecord() {
@@ -503,11 +610,10 @@ function restoreSavedRecord() {
     console.log(
         "Saved record detected."
     );
-
 }
 
 // =====================================================
-// Export JSON
+// Export
 // =====================================================
 
 function exportJson() {
@@ -550,11 +656,10 @@ function exportJson() {
     document.body.removeChild(
         link
     );
-
 }
 
 // =====================================================
-// Language Switching
+// Language
 // =====================================================
 
 function switchLanguage() {
@@ -575,13 +680,10 @@ function switchLanguage() {
 
         title.innerText =
             "État de service pour un brevet";
-
     }
     else {
 
         title.innerText =
             "Statement of Sea Service for a Certificate";
-
     }
-
 }
