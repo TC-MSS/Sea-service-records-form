@@ -341,37 +341,7 @@ document.getElementById(
     "statusPanel"
 ).innerHTML =
     status.message;
-    const certificate =
-    document.getElementById(
-        "certificate"
-    ).value;
-
-const validation =
-    validateCertificateEligibility(
-        certificate,
-        voyages,
-        buildRecordObject()
-            .specialOperations
-    );
-
-const status =
-    buildValidationMessage(
-        validation
-    );
-
-document.getElementById(
-    "statusPanel"
-).className =
-    status.className;
-
-document.getElementById(
-    "statusPanel"
-).innerHTML =
-    status.message;
-
-    updateSummaryUI(
-        summary
-    );
+   
 document.getElementById(
     "service8Hours"
 ).textContent =
