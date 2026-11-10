@@ -203,7 +203,7 @@ Sea Service Records
 
 <tr>
 
-<th>A<br>Rank</th>
+<th>A<br>Capacity</th>
 
 <th>B<br>Vessel</th>
 
@@ -223,6 +223,20 @@ Sea Service Records
 
 <th>J<br>Watch</th>
 
+  <th>K<br>Polar</th>
+  
+<th>L<br>Ice</th>
+  
+<th>M<br>Passenger</th>
+  
+<th>N<br>Tanker</th>
+  
+<th>O<br>Fishing</th>
+  
+<th>P<br>DP</th>
+  
+<th>Q<br>Offshore</th>
+  
 <th>K<br>Embark</th>
 
 <th>L<br>Disembark</th>
@@ -247,69 +261,6 @@ Add Voyage
 </section>
 
 <section>
-
-<h2>
-Special Operations
-</h2>
-
-<div class="checkboxGrid">
-
-<label>
-<input type="checkbox" id="polar">
-Polar Waters
-</label>
-
-<label>
-<input type="checkbox" id="ice">
-Acceptable Ice Waters
-</label>
-
-<label>
-<input type="checkbox" id="oil">
-Oil Transfer
-</label>
-
-<label>
-<input type="checkbox" id="chemical">
-Chemical Transfer
-</label>
-
-<label>
-<input type="checkbox" id="lng">
-LNG Transfer
-</label>
-
-<label>
-<input type="checkbox" id="lpg">
-LPG Transfer
-</label>
-
-<label>
-<input type="checkbox" id="sts">
-STS Transfer
-</label>
-
-<label>
-<input type="checkbox" id="dp">
-Dynamic Positioning
-</label>
-
-<label>
-<input type="checkbox" id="offshore">
-Offshore Operations
-</label>
-
-<label>
-<input type="checkbox" id="passenger">
-Passenger Operations
-</label>
-
-<label>
-<input type="checkbox" id="fishing">
-Fishing Operations
-</label>
-
-</div>
 
 </section>
 
@@ -368,6 +319,19 @@ Rejected
 
 </div>
 
+<div>
+
+<label>
+Examiner Comments
+</label>
+
+<textarea
+ id="examinerComments"
+ rows="5">
+</textarea>
+
+</div>
+
 </section>
 
 <section>
@@ -384,113 +348,121 @@ No validation issues.
 
 <section>
 
-<div class="summary">
+<h2>
+Sea Service Assessment
+</h2>
+
+<div class="summaryGrid">
+
+<div class="summaryCard">
+
+<h3>Total Service</h3>
 
 <div>
-Total Submitted Days:
+Submitted Days:
 <span id="totalDays">0</span>
 </div>
 
 <div>
-Accepted Service Days:
+Qualifying Days:
 <span id="acceptedDays">0</span>
 </div>
 
 <div>
-8 Hour Watch Service:
+8 Hour Watch:
 <span id="service8Hours">0</span>
 </div>
 
 <div>
-12 Hour Watch Service:
+12 Hour Watch:
 <span id="service12Hours">0</span>
 </div>
 
+</div>
+
+<div class="summaryCard">
+
+<h3>Capacity Breakdown</h3>
+
 <div>
-Captain Service:
+Master:
 <span id="captainDays">0</span>
 </div>
 
 <div>
-Chief Officer Service:
+Chief Mate:
 <span id="chiefOfficerDays">0</span>
 </div>
 
 <div>
-Officer Service:
+Officer:
 <span id="officerDays">0</span>
 </div>
 
+</div>
+
+<div class="summaryCard">
+
+<h3>Tonnage Assessment</h3>
+
 <div>
-Service On Vessels >500 GT:
+500 GT+:
 <span id="gt500Days">0</span>
 </div>
 
 <div>
-Service On Vessels >3000 GT:
+3000 GT+:
 <span id="gt3000Days">0</span>
 </div>
 
 <div>
-Near Coastal Service:
+Near Coastal:
 <span id="nearCoastalDays">0</span>
 </div>
 
 <div>
-Unlimited Voyage Service:
+Unlimited:
 <span id="unlimitedDays">0</span>
 </div>
-  
+
+</div>
+
+<div class="summaryCard">
+
+<h3>Specialized Service</h3>
+
 <div>
-Polar Days:
+Polar:
 <span id="polarDays">0</span>
 </div>
 
 <div>
-Ice Navigation Days:
+Ice:
 <span id="iceDays">0</span>
 </div>
 
 <div>
-Oil Transfer Days:
-<span id="oilDays">0</span>
-</div>
-
-<div>
-Chemical Transfer Days:
-<span id="chemicalDays">0</span>
-</div>
-
-<div>
-LNG Transfer Days:
-<span id="lngDays">0</span>
-</div>
-
-<div>
-LPG Transfer Days:
-<span id="lpgDays">0</span>
-</div>
-
-<div>
-Dynamic Positioning Days:
-<span id="dpDays">0</span>
-</div>
-
-<div>
-Offshore Operation Days:
-<span id="offshoreDays">0</span>
-</div>
-
-<div>
-Passenger Operation Days:
+Passenger:
 <span id="passengerDays">0</span>
 </div>
 
 <div>
-Fishing Operation Days:
+Fishing:
 <span id="fishingDays">0</span>
 </div>
 
+<div>
+DP:
+<span id="dpDays">0</span>
+</div>
+
+<div>
+Offshore:
+<span id="offshoreDays">0</span>
+</div>
+
+</div>
+  
 </div>
 
 </section>
