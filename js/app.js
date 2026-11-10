@@ -117,13 +117,6 @@ function addRecord() {
 </td>
 
 <td>
-<input
-type="date"
-class="embark"
-onchange="calculateTotal()">
-</td>
-
-<td>
 <input type="checkbox" class="polar">
 </td>
 
@@ -149,6 +142,13 @@ onchange="calculateTotal()">
 
 <td>
 <input type="checkbox" class="offshore">
+</td>
+
+<td>
+<input
+type="date"
+class="embark"
+onchange="calculateTotal()">
 </td>
 
 <td>
@@ -556,9 +556,7 @@ updateReviewFindings(
 const validation =
     validateCertificateEligibility(
         certificate,
-        voyages,
-        buildRecordObject()
-            .specialOperations
+        voyages
     );
 
 const status =
@@ -793,92 +791,90 @@ function buildRecordObject() {
         )
         .forEach(row => {
 
-            voyages.push({
+voyages.push({
 
-                rank:
-                    row.querySelector(
-                        ".rank"
-                    ).value,
+    rank:
+        row.querySelector(
+            ".rank"
+        ).value,
 
-                kw:
-                    row.querySelector(
-                        ".kw"
-                    ).value,
+    kw:
+        row.querySelector(
+            ".kw"
+        ).value,
 
-                vessel:
-                    row.querySelector(
-                        ".vessel"
-                    ).value,
+    vessel:
+        row.querySelector(
+            ".vessel"
+        ).value,
 
-                identifier:
-                    row.querySelector(
-                        ".identifier"
-                    ).value,
+    identifier:
+        row.querySelector(
+            ".identifier"
+        ).value,
 
-                gt:
-                    row.querySelector(
-                        ".gt"
-                    ).value,
+    gt:
+        row.querySelector(
+            ".gt"
+        ).value,
 
-                voyage:
-                    row.querySelector(
-                        ".voyage"
-                    ).value,
+    voyage:
+        row.querySelector(
+            ".voyage"
+        ).value,
 
-                embark:
-                    row.querySelector(
-                        ".embark"
-                    ).value,
+    embark:
+        row.querySelector(
+            ".embark"
+        ).value,
 
-                disembark:
-                    row.querySelector(
-                        ".disembark"
-                    ).value,
+    disembark:
+        row.querySelector(
+            ".disembark"
+        ).value,
 
-                days:
-                    row.querySelector(
-                        ".daysCell"
-                    ).textContent,
+    days:
+        row.querySelector(
+            ".daysCell"
+        ).textContent,
 
-                polar:
-                    row.querySelector(
-                        ".polar"
-                    )?.checked || false,
+    polar:
+        row.querySelector(
+            ".polar"
+        )?.checked || false,
 
-                ice:
-                    row.querySelector(
-                        ".ice"
-                    )?.checked || false,
+    ice:
+        row.querySelector(
+            ".ice"
+        )?.checked || false,
 
-                passenger:
-                    row.querySelector(
-                        ".passenger"
-                    )?.checked || false,
+    passenger:
+        row.querySelector(
+            ".passenger"
+        )?.checked || false,
 
-                tanker:
-                    row.querySelector(
-                        ".tanker"
-                    )?.checked || false,
+    tanker:
+        row.querySelector(
+            ".tanker"
+        )?.checked || false,
 
-                fishing:
-                    row.querySelector(
-                        ".fishing"
-                    )?.checked || false,
+    fishing:
+        row.querySelector(
+            ".fishing"
+        )?.checked || false,
 
-                dp:
-                    row.querySelector(
-                        ".dp"
-                    )?.checked || false,
+    dp:
+        row.querySelector(
+            ".dp"
+        )?.checked || false,
 
-                offshore:
-                    row.querySelector(
-                        ".offshore"
-                    )?.checked || false
+    offshore:
+        row.querySelector(
+            ".offshore"
+        )?.checked || false
 
-            });
-
-        });
-
+});
+            
     return {
 
         surname:
