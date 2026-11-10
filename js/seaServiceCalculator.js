@@ -133,21 +133,28 @@ export class SeaServiceCalculator {
 
        const totals = {
 
-        totalOnboardDays: 0,
-        totalQualifyingDays: 0,
+         totalOnboardDays: 0,
+    totalQualifyingDays: 0,
 
-        service8Hour: 0,
-        service12Hour: 0,
+    service8Hour: 0,
+    service12Hour: 0,
 
-        captainDays: 0,
-        chiefOfficerDays: 0,
-        officerDays: 0,
+    captainDays: 0,
+    chiefOfficerDays: 0,
+    officerDays: 0,
 
-        gt500Days: 0,
-        gt3000Days: 0,
+    gt500Days: 0,
+    gt3000Days: 0,
 
-        nearCoastalDays: 0,
-        unlimitedDays: 0
+    nearCoastalDays: 0,
+    unlimitedDays: 0,
+
+    polarDays: 0,
+    iceNavigationDays: 0,
+
+    oilTankerDays: 0,
+    chemicalTankerDays: 0,
+    lngTankerDays: 0
     };
 
     records.forEach(record => {
@@ -238,6 +245,35 @@ export class SeaServiceCalculator {
             totals.unlimitedDays +=
                 qualifyingDays;
         }
+        if (record.polarWaters === true) {
+
+    totals.polarDays +=
+        qualifyingDays;
+}
+
+if (record.iceNavigation === true) {
+
+    totals.iceNavigationDays +=
+        qualifyingDays;
+}
+
+if (record.oilTanker === true) {
+
+    totals.oilTankerDays +=
+        qualifyingDays;
+}
+
+if (record.chemicalTanker === true) {
+
+    totals.chemicalTankerDays +=
+        qualifyingDays;
+}
+
+if (record.lngTanker === true) {
+
+    totals.lngTankerDays +=
+        qualifyingDays;
+}
     });
 
     return totals;
@@ -289,9 +325,25 @@ export class SeaServiceCalculator {
     unlimitedDays:
         totals.unlimitedDays,
 
+            polarDays:
+    totals.polarDays,
+
+iceNavigationDays:
+    totals.iceNavigationDays,
+
+oilTankerDays:
+    totals.oilTankerDays,
+
+chemicalTankerDays:
+    totals.chemicalTankerDays,
+
+lngTankerDays:
+    totals.lngTankerDays,
+
     overlapCount:
         overlaps.length,
 
     overlaps
 };
-       }
+         }
+}
