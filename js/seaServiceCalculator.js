@@ -253,19 +253,45 @@ export class SeaServiceCalculator {
 
         return {
 
-            totalRecords:
-                records.length,
+          totalRecords:
+        records.length,
 
-            totalOnboardDays:
-                totals.totalOnboardDays,
+    totalOnboardDays:
+        totals.totalOnboardDays,
 
-            totalQualifyingDays:
-                totals.totalQualifyingDays,
+    totalQualifyingDays:
+        totals.totalQualifyingDays,
 
-            overlapCount:
-                overlaps.length,
+    service8Hour:
+        totals.service8Hour,
 
-            overlaps
-        };
-    }
-}
+    service12Hour:
+        totals.service12Hour,
+
+    captainDays:
+        totals.captainDays,
+
+    chiefOfficerDays:
+        totals.chiefOfficerDays,
+
+    officerDays:
+        totals.officerDays,
+
+    gt500Days:
+        totals.gt500Days,
+
+    gt3000Days:
+        totals.gt3000Days,
+
+    nearCoastalDays:
+        totals.nearCoastalDays,
+
+    unlimitedDays:
+        totals.unlimitedDays,
+
+    overlapCount:
+        overlaps.length,
+
+    overlaps
+};
+       }
