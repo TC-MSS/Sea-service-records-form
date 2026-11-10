@@ -706,13 +706,7 @@ function exportJson() {
 // =====================================================
 
 function switchLanguage() {
-   ...
-}
 
-window.addRecord = addRecord;
-window.calculateTotal = calculateTotal;
-window.saveRecord = saveRecord;
-window.exportJson = exportJson;
     const lang =
         document.getElementById(
             "langSelector"
@@ -736,3 +730,7 @@ window.exportJson = exportJson;
             "Statement of Sea Service for a Certificate";
     }
 }
+window.addRecord = addRecord;
+window.calculateTotal = calculateTotal;
+window.saveRecord = saveRecord;
+window.exportJson = exportJson;
