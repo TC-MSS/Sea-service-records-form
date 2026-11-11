@@ -1,0 +1,584 @@
+<!-- deployment test -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Statement of Sea Service for a Certificate</title>
+
+<link rel="stylesheet" href="css/app.css">
+
+</head>
+
+<body>
+
+<header class="banner">
+
+<h1 id="title">
+Statement of Sea Service for a Certificate
+</h1>
+
+<select id="langSelector">
+<option value="en">English</option>
+<option value="fr">Français</option>
+</select>
+
+</header>
+
+<section class="formSection">
+
+<h2 id="applicantInfoTitle">
+Applicant Information
+</h2>
+
+<div class="grid2">
+
+<div>
+<label>Surname</label>
+<input id="surname">
+</div>
+
+<div>
+<label>Given Names</label>
+<input id="givenNames">
+</div>
+
+<div>
+<label>CDN Number</label>
+<input id="cdn">
+</div>
+
+<div>
+<label>Application Date</label>
+<input type="date" id="applicationDate">
+</div>
+
+<div>
+<label>Certificate Applied For</label>
+
+<select id="certificate">
+
+<option value="">
+Select Certificate
+</option>
+
+<optgroup label="Deck Certificates">
+
+<option>Master Mariner</option>
+
+<option>Master, Near Coastal</option>
+
+<option>Master 3 000 Gross Tonnage, Near Coastal</option>
+
+<option>Master 500 Gross Tonnage, Near Coastal</option>
+
+<option>Master 3 000 Gross Tonnage, Domestic</option>
+
+<option>Master 500 Gross Tonnage, Domestic</option>
+
+<option>Master 150 Gross Tonnage, Domestic</option>
+
+<option>Master, Limited</option>
+
+<option>Chief Mate</option>
+
+<option>Chief Mate, Near Coastal</option>
+
+<option>Watchkeeping Mate</option>
+
+<option>Watchkeeping Mate, Near Coastal</option>
+
+<option>Chief Mate 500 Gross Tonnage, Domestic</option>
+
+<option>Chief Mate 150 Gross Tonnage, Domestic</option>
+
+<option>Chief Mate, Limited</option>
+
+</optgroup>
+
+<optgroup label="Fishing Certificates">
+
+<option>Fishing Master, First Class</option>
+
+<option>Fishing Master, Second Class</option>
+
+<option>Fishing Master, Third Class</option>
+
+<option>Fishing Master, Fourth Class</option>
+
+<option>
+Certificate of Service as Master of a Fishing Vessel of Less Than 60 Gross Tonnage
+</option>
+
+</optgroup>
+
+<optgroup label="Engineer Certificates">
+
+<option>First-class Engineer, Motor Ship</option>
+
+<option>First-class Engineer, Steamship</option>
+
+<option>Second-class Engineer, Motor Ship</option>
+
+<option>Second-class Engineer, Steamship</option>
+
+<option>Third-class Engineer, Motor Ship</option>
+
+<option>Third-class Engineer, Steamship</option>
+
+<option>Fourth-class Engineer, Motor Ship</option>
+
+<option>Fourth-class Engineer, Steamship</option>
+
+<option>
+Watchkeeping Engineer, Motor-driven Fishing Vessel
+</option>
+
+<option>
+Small Vessel Machinery Operator
+</option>
+
+</optgroup>
+
+<optgroup label="STCW Proficiency and Endorsements">
+
+<option>
+Proficiency in Survival Craft and Rescue Boats Other Than Fast Rescue Boats
+</option>
+
+<option>
+Supervisor of an Oil Transfer Operation
+</option>
+
+<option>
+Supervisor of an Oil Transfer Operation in Arctic Waters (North of 60° N)
+</option>
+
+<option>
+Supervisor of a Chemical Transfer Operation
+</option>
+
+<option>
+Supervisor of a Liquefied Gas Transfer Operation
+</option>
+
+<option>
+Able Seafarer
+</option>
+
+<option>
+Bridge Watch Rating
+</option>
+
+<option>
+Engine-room Rating
+</option>
+
+</optgroup>
+
+</select>
+  
+</div>
+
+<div>
+<label>Certificate Held</label>
+<input id="certificateHeld">
+</div>
+
+</div>
+
+</section>
+
+<section>
+
+<h2>
+Sea Service Records
+</h2>
+
+<table id="serviceTable">
+
+<thead>
+
+<tr>
+
+<th>A<br>Capacity</th>
+
+<th>B<br>Vessel</th>
+
+<th>C<br>Official / IMO</th>
+
+<th>D<br>Vessel Type</th>
+
+<th>E<br>kW</th>
+
+<th>F<br>Propulsion</th>
+
+<th>G<br>GT</th>
+
+<th>H<br>Voyage</th>
+
+<th>I<br>Registry</th>
+
+<th>J<br>Watch</th>
+
+<th>K<br>Polar</th>
+  
+<th>L<br>Ice</th>
+  
+<th>M<br>Passenger</th>
+  
+<th>N<br>Tanker</th>
+  
+<th>O<br>Fishing</th>
+  
+<th>P<br>DP</th>
+  
+<th>Q<br>Offshore</th>
+  
+<th>R<br>Embark</th>
+<th>S<br>Disembark</th>
+<th>T<br>Days</th>
+<th>Actions</th>
+
+</tr>
+
+</thead>
+
+<tbody id="recordsBody">
+</tbody>
+
+</table>
+
+<button onclick="addRecord()">
+Add Voyage
+</button>
+
+</section>
+
+<section>
+
+<h2>
+Examiner Validation
+</h2>
+
+<div class="checkboxGrid">
+
+<label>
+<input type="checkbox">
+Voyage Verified
+</label>
+
+<label>
+<input type="checkbox">
+GT Verified
+</label>
+
+<label>
+<input type="checkbox">
+Position Verified
+</label>
+
+<label>
+<input type="checkbox">
+Embarkation Verified
+</label>
+
+<label>
+<input type="checkbox">
+Disembarkation Verified
+</label>
+
+<label>
+<input type="checkbox">
+Sea Service Verified
+</label>
+
+<label>
+<input type="checkbox">
+Accepted
+</label>
+
+<label>
+<input type="checkbox">
+Accepted with Adjustment
+</label>
+
+<label>
+<input type="checkbox">
+Rejected
+</label>
+
+</div>
+
+<div>
+
+<label>
+Examiner Comments
+</label>
+
+<textarea
+ id="examinerComments"
+ rows="5">
+</textarea>
+
+</div>
+
+</section>
+
+<section>
+
+<h2>Status</h2>
+
+<div id="statusPanel">
+
+No validation issues.
+
+</div>
+
+<h3>
+Service Review Findings
+</h3>
+
+<div id="reviewWarnings">
+
+No findings.
+
+</div>  
+
+
+  
+</section>
+
+<section>
+
+<h2>
+Examiner Review Summary
+</h2>
+
+<div class="summaryGrid">
+
+<div class="summaryCard">
+
+<h3>Review Status</h3>
+
+<div>
+Records Reviewed:
+<span id="recordsReviewed">0</span>
+</div>
+
+<div>
+Outstanding Issues:
+<span id="outstandingIssues">0</span>
+</div>
+
+</div>
+
+<div class="summaryCard">
+
+<h3>Service Verification</h3>
+
+<div>
+Claimed Days:
+<span id="claimedDaysReview">0</span>
+</div>
+
+<div>
+Accepted Days:
+<span id="acceptedDaysReview">0</span>
+</div>
+
+<div>
+Adjusted Days:
+<span id="adjustedDaysReview">0</span>
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+  
+<section>
+
+<h2>
+Sea Service Assessment
+</h2>
+
+<div class="summaryGrid">
+
+<div class="summaryCard">
+
+<h3>Total Service</h3>
+
+<div>
+Submitted Days:
+<span id="totalDays">0</span>
+</div>
+
+<div>
+Qualifying Days:
+<span id="acceptedDays">0</span>
+</div>
+
+<div>
+8 Hour Watch:
+<span id="service8Hours">0</span>
+</div>
+
+<div>
+12 Hour Watch:
+<span id="service12Hours">0</span>
+</div>
+
+</div>
+
+<div class="summaryCard">
+
+<h3>Capacity Breakdown</h3>
+
+<div>
+Master:
+<span id="captainDays">0</span>
+</div>
+
+<div>
+Chief Mate:
+<span id="chiefOfficerDays">0</span>
+</div>
+
+<div>
+Officer:
+<span id="officerDays">0</span>
+</div>
+
+</div>
+
+<div class="summaryCard">
+
+<h3>Tonnage Assessment</h3>
+
+<div>
+500 GT+:
+<span id="gt500Days">0</span>
+</div>
+
+<div>
+3000 GT+:
+<span id="gt3000Days">0</span>
+</div>
+
+<div>
+Near Coastal:
+<span id="nearCoastalDays">0</span>
+</div>
+
+<div>
+Unlimited:
+<span id="unlimitedDays">0</span>
+</div>
+
+</div>
+
+<div class="summaryCard">
+
+<h3>Specialized Service</h3>
+
+<div>
+Polar:
+<span id="polarDays">0</span>
+</div>
+
+<div>
+Ice:
+<span id="iceDays">0</span>
+</div>
+
+<div>
+Passenger:
+<span id="passengerDays">0</span>
+</div>
+
+<div>
+Fishing:
+<span id="fishingDays">0</span>
+</div>
+
+<div>
+Oil Tanker:
+<span id="oilDays">0</span>
+</div>
+
+<div>
+Chemical Tanker:
+<span id="chemicalDays">0</span>
+</div>
+
+<div>
+Gas Tanker:
+<span id="gasDays">0</span>
+</div>
+  
+<div>
+DP:
+<span id="dpDays">0</span>
+</div>
+
+<div>
+Offshore:
+<span id="offshoreDays">0</span>
+</div>
+
+</div>
+  
+</div>
+
+</section>
+
+<section>
+
+<h2>
+Applicant Declaration
+</h2>
+
+<label>
+
+<input type="checkbox" id="applicantDeclaration">
+
+I certify that the information provided in this sea service record is accurate and complete.
+
+</label>
+
+</section>  
+  
+<section>
+
+<button onclick="calculateTotal()">
+Calculate Service
+</button>
+
+<button onclick="saveRecord()">
+Save
+</button>
+
+<button onclick="exportJson()">
+Export JSON
+</button>
+
+<button onclick="window.print()">
+Print
+</button>
+
+</section>
+
+<script src="js/certificateRules.js"></script>
+<script src="js/validationEngine.js"></script>
+<script src="js/storageEngine.js"></script>
+
+<script type="module" src="js/app.js"></script>
+
+</body>
+</html>
+``
