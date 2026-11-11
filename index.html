@@ -16,9 +16,7 @@
 
 <header class="banner">
 
-<h1 id="title">
-Statement of Sea Service for a Certificate
-</h1>
+<h1 id="title" data-i18n="pageTitle">Statement of Sea Service for a Certificate</h1>
 
 <select id="langSelector">
 <option value="en">English</option>
@@ -29,34 +27,32 @@ Statement of Sea Service for a Certificate
 
 <section class="formSection">
 
-<h2 id="applicantInfoTitle">
-Applicant Information
-</h2>
+<h2 id="applicantInfoTitle" data-i18n="applicantInformation">Applicant Information</h2>
 
 <div class="grid2">
 
 <div>
-<label>Surname</label>
+<label data-i18n="surname">Surname</label>
 <input id="surname">
 </div>
 
 <div>
-<label>Given Names</label>
+<label data-i18n="givenNames">Given Names</label>
 <input id="givenNames">
 </div>
 
 <div>
-<label>CDN Number</label>
+<label data-i18n="cdnNumber">CDN Number</label>
 <input id="cdn">
 </div>
 
 <div>
-<label>Application Date</label>
+<label data-i18n="applicationDate">Application Date</label>
 <input type="date" id="applicationDate">
 </div>
 
 <div>
-<label>Certificate Applied For</label>
+<label data-i18n="certificateApplied">Certificate Applied For</label>
 
 <select id="certificate">
 
@@ -183,8 +179,8 @@ Engine-room Rating
 </div>
 
 <div>
-<label>Certificate Held</label>
-<input id="certificateHeld">
+<label data-i18n="certificateHeld">Certificate Held</label>
+<select id="certificateHeld"></select>
 </div>
 
 </div>
@@ -193,67 +189,30 @@ Engine-room Rating
 
 <section>
 
-<h2>
-Sea Service Records
-</h2>
+<h2 data-i18n="seaServiceRecords">Sea Service Records</h2>
 
 <table id="serviceTable">
 
-<thead>
-
-<tr>
-
-<th>A<br>Capacity</th>
-
-<th>B<br>Vessel</th>
-
-<th>C<br>Official / IMO</th>
-
-<th>D<br>Vessel Type</th>
-
-<th>E<br>kW</th>
-
-<th>F<br>Propulsion</th>
-
-<th>G<br>GT</th>
-
-<th>H<br>Voyage</th>
-
-<th>I<br>Registry</th>
-
-<th>J<br>Watch</th>
-
-<th>K<br>Polar</th>
-  
-<th>L<br>Ice</th>
-  
-<th>M<br>Passenger</th>
-  
-<th>N<br>Tanker</th>
-  
-<th>O<br>Fishing</th>
-  
-<th>P<br>DP</th>
-  
-<th>Q<br>Offshore</th>
-  
-<th>R<br>Embark</th>
-<th>S<br>Disembark</th>
-<th>T<br>Days</th>
-<th>Actions</th>
-
-</tr>
-
-</thead>
+<thead><tr>
+<th data-i18n="capacity">A<br>Capacity</th>
+<th data-i18n="vessel">B<br>Vessel</th>
+<th data-i18n="officialImo">C<br>Official / IMO</th>
+<th data-i18n="vesselType">D<br>Vessel Type</th>
+<th>E<br>kW</th><th data-i18n="propulsion">F<br>Propulsion</th><th>G<br>GT</th>
+<th data-i18n="voyage">H<br>Voyage</th><th data-i18n="registry">I<br>Registry</th><th data-i18n="watch">J<br>Watch</th>
+<th data-i18n="iceService">K<br>Ice</th><th data-i18n="passenger">L<br>Passenger</th><th data-i18n="transferOperation">M<br>Transfer operation</th>
+<th data-i18n="fishing">N<br>Fishing</th><th data-i18n="dpOffshore">O<br>DP / Offshore</th>
+<th data-i18n="embark">P<br>Embark</th><th data-i18n="disembark">Q<br>Disembark</th>
+<th data-i18n="daysOnBoard">R<br>Days on board</th><th data-i18n="daysAtSea">S<br>Days at sea, if different</th>
+<th data-i18n="actions">Actions</th>
+</tr></thead>
 
 <tbody id="recordsBody">
 </tbody>
 
 </table>
 
-<button onclick="addRecord()">
-Add Voyage
-</button>
+<button type="button" onclick="addRecord()" data-i18n="addVoyage">Add Voyage</button>
 
 </section>
 
@@ -507,17 +466,17 @@ Fishing:
 </div>
 
 <div>
-Oil Tanker:
+Oil transfer:
 <span id="oilDays">0</span>
 </div>
 
 <div>
-Chemical Tanker:
+Chemical transfer:
 <span id="chemicalDays">0</span>
 </div>
 
 <div>
-Gas Tanker:
+Gas transfer:
 <span id="gasDays">0</span>
 </div>
   
@@ -539,15 +498,13 @@ Offshore:
 
 <section>
 
-<h2>
-Applicant Declaration
-</h2>
+<h2 data-i18n="applicantDeclarationTitle">Applicant Declaration</h2>
 
 <label>
 
 <input type="checkbox" id="applicantDeclaration">
 
-I certify that the information provided in this sea service record is accurate and complete.
+<span data-i18n="declaration">I certify that the information provided in this sea service record is accurate and complete.</span>
 
 </label>
 
@@ -555,21 +512,13 @@ I certify that the information provided in this sea service record is accurate a
   
 <section>
 
-<button onclick="calculateTotal()">
-Calculate Service
-</button>
+<button type="button" onclick="calculateTotal()" data-i18n="calculateService">Calculate Service</button>
 
-<button onclick="saveRecord()">
-Save
-</button>
+<button type="button" onclick="saveRecord()" data-i18n="save">Save</button>
 
-<button onclick="exportJson()">
-Export JSON
-</button>
+<button type="button" onclick="exportJson()" data-i18n="exportJson">Export JSON</button>
 
-<button onclick="window.print()">
-Print
-</button>
+<button type="button" onclick="window.print()" data-i18n="print">Print</button>
 
 </section>
 
@@ -581,4 +530,3 @@ Print
 
 </body>
 </html>
-``
