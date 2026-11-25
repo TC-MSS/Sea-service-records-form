@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sea Service Records — Examiner Review (development v0.5.0)</title>
+<link rel="stylesheet" href="../css/app.css">
+<link rel="stylesheet" href="css/examiner.css">
+</head>
+<body>
+
+<header class="banner">
+  <h1 data-i18n="pageTitle">Sea Service Records — Examiner Review (development v0.5.0)</h1>
+  <select id="langSelector" aria-label="Language / Langue">
+    <option value="en">English</option>
+    <option value="fr">Français</option>
+  </select>
+</header>
+
+<p class="devBanner" data-i18n="devBanner">Development build — not for production assessments. Converted days and certificate eligibility are not yet calculated.</p>
+
+<section class="noPrint">
+  <h2 data-i18n="recordActions">Record</h2>
+  <div class="toolbar">
+    <button type="button" id="btnLoadCandidate" data-i18n="loadCandidate">Load candidate record (this browser)</button>
+    <button type="button" id="btnLoadDraft" data-i18n="loadDraft">Load examiner draft</button>
+    <label class="fileButton"><span data-i18n="importJson">Import JSON</span>
+      <input type="file" id="fileImport" accept="application/json,.json">
+    </label>
+    <button type="button" id="btnSave" data-i18n="saveDraft">Save examiner draft</button>
+    <button type="button" id="btnExport" data-i18n="exportJson">Export JSON</button>
+    <button type="button" id="btnPrint" data-i18n="print">Print</button>
+  </div>
+  <div id="statusPanel" role="status" aria-live="polite" data-i18n="noRecord">No record loaded. Load the candidate record saved in this browser or import a JSON file.</div>
+</section>
+
+<section>
+  <h2 data-i18n="applicantInformation">Applicant Information</h2>
+  <dl class="infoGrid">
+    <div><dt data-i18n="surname">Surname</dt><dd id="infoSurname">—</dd></div>
+    <div><dt data-i18n="givenNames">Given Names</dt><dd id="infoGivenNames">—</dd></div>
+    <div><dt data-i18n="cdnNumber">CDN Number</dt><dd id="infoCdn">—</dd></div>
+    <div><dt data-i18n="applicationDate">Application Date</dt><dd id="infoApplicationDate">—</dd></div>
+    <div><dt data-i18n="certificateApplied">Certificate Applied For</dt><dd id="infoCertificate">—</dd></div>
+    <div><dt data-i18n="certificateHeld">Certificate Held</dt><dd id="infoCertificateHeld">—</dd></div>
+    <div><dt data-i18n="recordStatus">Schema / record</dt><dd id="infoSchema">—</dd></div>
+  </dl>
+</section>
+
+<section>
+  <h2 data-i18n="seaServiceRecords">Sea Service Records</h2>
+  <div class="tableWrap">
+  <table id="serviceTable">
+    <thead><tr>
+      <th data-i18n="line">Line</th>
+      <th data-i18n="capacity">A<br>Capacity</th>
+      <th data-i18n="vessel">B<br>Vessel</th>
+      <th data-i18n="officialImo">C<br>Official / IMO</th>
+      <th data-i18n="vesselType">D<br>Vessel Type</th>
+      <th data-i18n="kw">E<br>kW</th>
+      <th data-i18n="propulsion">F<br>Propulsion</th>
+      <th data-i18n="gt">G<br>GT</th>
+      <th data-i18n="voyage">H<br>Voyage</th>
+      <th data-i18n="registry">I<br>Registry</th>
+      <th data-i18n="watch">J<br>Watch</th>
+      <th data-i18n="specialized">K–O<br>Specialized service</th>
+      <th data-i18n="embark">P<br>Embark</th>
+      <th data-i18n="disembark">Q<br>Disembark</th>
+      <th data-i18n="daysOnBoard">R<br>Days on board</th>
+      <th data-i18n="daysAtSea">S<br>Days at sea, if different</th>
+      <th data-i18n="convertedDays">T<br>Converted days</th>
+    </tr></thead>
+    <tbody id="recordsBody"></tbody>
+  </table>
+  </div>
+</section>
+
+<!-- Examiner-only controls, cloned once per sea-service line by js/examiner.js -->
+<template id="reviewTemplate">
+  <div class="reviewPanel">
+    <h3><span class="reviewTitle">Examiner review</span> <span class="examinerOnlyTag" data-i18n="examinerOnly">Examiner only</span></h3>
+    <fieldset class="verifyGrid">
+      <legend data-i18n="verification">Verification</legend>
+      <label><input type="checkbox" data-field="vesselVerified"> <span data-i18n="vesselVerified">Vessel verified</span></label>
+      <label><input type="checkbox" data-field="capacityVerified"> <span data-i18n="capacityVerified">Capacity verified</span></label>
+      <label><input type="checkbox" data-field="datesVerified"> <span data-i18n="datesVerified">Dates verified</span></label>
+      <label><input type="checkbox" data-field="specializedServiceVerified"> <span data-i18n="specializedServiceVerified">Specialized service verified</span></label>
+      <label><input type="checkbox" data-field="supportingDocumentsVerified"> <span data-i18n="supportingDocumentsVerified">Supporting documents verified</span></label>
+    </fieldset>
+    <div class="reviewGrid">
+      <label><span data-i18n="reviewStatus">Review status</span>
+        <select data-field="reviewStatus">
+          <option value="NOT_REVIEWED" data-i18n="NOT_REVIEWED">Not reviewed</option>
+          <option value="ACCEPTED" data-i18n="ACCEPTED">Accepted</option>
+          <option value="ACCEPTED_WITH_ADJUSTMENT" data-i18n="ACCEPTED_WITH_ADJUSTMENT">Accepted with adjustment</option>
+          <option value="ADDITIONAL_INFORMATION_REQUIRED" data-i18n="ADDITIONAL_INFORMATION_REQUIRED">Additional information required</option>
+          <option value="REJECTED" data-i18n="REJECTED">Rejected</option>
+        </select>
+      </label>
+      <label><span data-i18n="examinerBasis">Examiner basis</span>
+        <select data-field="examinerBasis">
+          <option value="NONE" data-i18n="select">Select</option>
+          <option value="DAYS_ON_BOARD" data-i18n="DAYS_ON_BOARD">Days on board</option>
+          <option value="DAYS_AT_SEA" data-i18n="DAYS_AT_SEA">Days at sea</option>
+          <option value="CONVERTED_DAYS" data-i18n="CONVERTED_DAYS">Converted days</option>
+          <option value="MANUAL_DETERMINATION" data-i18n="MANUAL_DETERMINATION">Manual determination</option>
+        </select>
+      </label>
+      <div class="basisDaysBox"><span data-i18n="basisDays">Basis days</span><output class="basisDays">—</output></div>
+      <label><span data-i18n="finalAcceptedDays">Final accepted days</span>
+        <input type="number" min="0" step="1" inputmode="numeric" data-field="finalAcceptedDays">
+      </label>
+      <label class="wide adjustmentLabel"><span class="adjustmentText" data-i18n="adjustmentReason">Adjustment reason</span>
+        <textarea rows="2" data-field="adjustmentReason"></textarea>
+      </label>
+      <label class="wide"><span data-i18n="examinerComments">Examiner comments</span>
+        <textarea rows="2" data-field="examinerComments"></textarea>
+      </label>
+    </div>
+    <ul class="messages" aria-live="polite"></ul>
+  </div>
+</template>
+
+<section>
+  <h2 data-i18n="generalAssessment">General examiner comments</h2>
+  <div class="grid2">
+    <label><span data-i18n="examinerName">Examiner name</span><input id="examinerName"></label>
+    <label class="wide"><span data-i18n="generalComments">General comments</span><textarea id="generalComments" rows="3"></textarea></label>
+  </div>
+</section>
+
+<section>
+  <h2 data-i18n="summary">Sea Service Summary</h2>
+  <div class="summaryGrid">
+    <div class="summaryCard">
+      <h3 data-i18n="candidateClaim">Candidate claim</h3>
+      <div><span data-i18n="totalDaysOnBoard">Total days on board</span>: <strong id="sumDaysOnBoard">0</strong></div>
+      <div><span data-i18n="totalDaysAtSea">Total days at sea</span>: <strong id="sumDaysAtSea">0</strong></div>
+    </div>
+    <div class="summaryCard">
+      <h3 data-i18n="automatedCalculation">Automated calculation</h3>
+      <div><span data-i18n="totalConvertedDays">Total converted days</span>: <strong id="sumConvertedDays">Not calculated</strong></div>
+    </div>
+    <div class="summaryCard">
+      <h3 data-i18n="examinerDetermination">Examiner determination</h3>
+      <div><span data-i18n="totalFinalAcceptedDays">Total final accepted days</span>: <strong id="sumFinalAcceptedDays">0</strong></div>
+      <div><span data-i18n="recordsReviewed">Lines reviewed</span>: <span id="sumReviewed">0</span></div>
+      <div><span data-i18n="recordsNotReviewed">Lines not reviewed</span>: <span id="sumNotReviewed">0</span></div>
+      <div><span data-i18n="recordsAccepted">Accepted</span>: <span id="sumAccepted">0</span></div>
+      <div><span data-i18n="recordsAcceptedWithAdjustment">Accepted with adjustment</span>: <span id="sumAdjusted">0</span></div>
+      <div><span data-i18n="recordsRequiringInformation">Additional information required</span>: <span id="sumInfo">0</span></div>
+      <div><span data-i18n="recordsRejected">Rejected</span>: <span id="sumRejected">0</span></div>
+      <div><span data-i18n="outstandingIssues">Lines with errors</span>: <span id="sumErrors">0</span></div>
+    </div>
+  </div>
+  <p class="note" data-i18n="summaryNote">Final accepted days count only lines marked Accepted or Accepted with adjustment.</p>
+</section>
+
+<script type="module" src="js/examiner.js"></script>
+</body>
+</html>

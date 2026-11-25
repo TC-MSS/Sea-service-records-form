@@ -1,0 +1,13 @@
+{
+  "surname": "Smith",
+  "givenNames": "John",
+  "cdn": "987654321",
+  "certificate": "CHIEF_MATE",
+  "examinerComments": "Legacy assessment notes.",
+  "positionVerified": true,
+  "seaServiceVerified": false,
+  "voyages": [
+    { "rank": "MATE", "vessel": "Old Tanker", "gt": 5000, "watch": 8, "embark": "2020-02-01", "disembark": "2020-02-10", "polar": true, "ice": true, "dp": true, "offshore": true, "tanker": true, "positionVerified": true, "seaServiceVerified": true },
+    { "rank": "MASTER", "vessel": "No Dates", "gt": 400, "days": 45, "polar": false, "ice": true, "dp": false, "offshore": true, "positionVerified": false }
+  ]
+}

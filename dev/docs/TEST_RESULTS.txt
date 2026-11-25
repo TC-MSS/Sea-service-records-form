@@ -1,0 +1,153 @@
+Test run: 2026-11-25T00:41Z  Node v22.23.5
+
+== Syntax ==
+OK   data/certificates.json
+OK   data/vesselThresholds.json
+OK   data/voyages.json
+OK   dev/examiner.html
+OK   dev/js/calculationEngine.js  (module)
+OK   dev/js/dataModel.js  (module)
+OK   dev/js/examiner.js  (module)
+OK   dev/js/examinerI18n.js  (module)
+OK   dev/js/examinerReview.js  (module)
+OK   dev/js/migrationEngine.js  (module)
+OK   dev/js/referenceData.js  (module)
+OK   dev/js/storageEngine.js  (module)
+OK   dev/js/summaryEngine.js  (module)
+OK   dev/js/validationEngine.js  (module)
+OK   dev/package.json
+OK   dev/tests/fixtures/legacy-pre-0.4.json
+OK   dev/tests/fixtures/legacy-v0.4.0.json
+OK   dev/tests/fixtures/record-v0.5.0-partial.json
+OK   dev/tests/model.test.mjs  (module)
+OK   dev/tests/smoke.mjs  (module)
+OK   dev/tools/check-deps.mjs  (module)
+OK   dev/tools/check-syntax.mjs  (module)
+OK   examiner.html  WARNING: <!DOCTYPE html> is not the first token (quirks mode)
+OK   index.html  WARNING: <!DOCTYPE html> is not the first token (quirks mode)
+OK   js/1calculationEngine.js  (module)
+OK   js/1dataModel.js  (module)
+OK   js/1examinerReview.js  (module)
+OK   js/1migrationEngine.js  (module)
+OK   js/1storageEngine.js  (module)
+OK   js/1summaryEngine.js  (module)
+OK   js/1validationEngine.js  (module)
+OK   js/app.js  (module)
+OK   js/certificateRules.js  (classic)
+OK   js/examiner-labels.js  (classic)
+OK   js/seaServiceCalculator.js  (module)
+OK   js/storageEngine.js  (classic)
+OK   js/tp2293Calculation.js  (module)
+OK   js/translations.js  (classic)
+OK   js/validationEngine.js  (classic)
+OK   js/voyageAssessmentEngine.js  (module)
+OK   records.html  WARNING: <!DOCTYPE html> is not the first token (quirks mode)
+
+All syntax checks passed.
+
+== Dependencies ==
+Repository root: /home/claude/repo
+
+Entry pages: dev/examiner.html, examiner.html, index.html, records.html
+
+Reference graph:
+  dev/examiner.html
+    -> [script] dev/js/examiner.js
+    -> [link] css/app.css
+    -> [link] dev/css/examiner.css
+  dev/js/examiner.js
+    -> [import] dev/js/examinerI18n.js
+    -> [import] dev/js/referenceData.js
+    -> [import] dev/js/examinerReview.js
+    -> [import] dev/js/validationEngine.js
+    -> [import] dev/js/summaryEngine.js
+    -> [import] dev/js/calculationEngine.js
+    -> [import] dev/js/storageEngine.js
+  dev/js/examinerReview.js
+    -> [import] dev/js/calculationEngine.js
+    -> [import] dev/js/validationEngine.js
+  dev/js/migrationEngine.js
+    -> [import] dev/js/dataModel.js
+    -> [import] dev/js/calculationEngine.js
+  dev/js/storageEngine.js
+    -> [import] dev/js/migrationEngine.js
+  dev/js/summaryEngine.js
+    -> [import] dev/js/dataModel.js
+  dev/js/validationEngine.js
+    -> [import] dev/js/dataModel.js
+  dev/tests/model.test.mjs
+    -> [import] dev/js/dataModel.js
+    -> [import] dev/js/calculationEngine.js
+    -> [import] dev/js/migrationEngine.js
+    -> [import] dev/js/examinerReview.js
+    -> [import] dev/js/validationEngine.js
+    -> [import] dev/js/summaryEngine.js
+    -> [import] dev/js/examinerI18n.js
+  examiner.html
+    -> [script] js/examiner-labels.js
+  index.html
+    -> [script] js/certificateRules.js
+    -> [script] js/validationEngine.js
+    -> [script] js/storageEngine.js
+    -> [script] js/app.js
+    -> [link] css/app.css
+  js/app.js
+    -> [import] js/seaServiceCalculator.js
+
+Unreferenced files (13):
+  - data/certificates.json
+  - data/vesselThresholds.json
+  - data/voyages.json
+  - js/1calculationEngine.js
+  - js/1dataModel.js
+  - js/1examinerReview.js
+  - js/1migrationEngine.js
+  - js/1storageEngine.js
+  - js/1summaryEngine.js
+  - js/1validationEngine.js
+  - js/tp2293Calculation.js
+  - js/translations.js
+  - js/voyageAssessmentEngine.js
+
+All local references resolve. OK
+
+== Unit tests ==
+ok 1 - inclusive day count
+ok 2 - days at sea: blank uses days on board; different flagged
+ok 3 - converted days default to null, never zero
+ok 4 - examiner basis options are exactly the four required
+ok 5 - adjustment reason required when final differs from basis
+ok 6 - manual determination always requires a reason
+ok 7 - converted-days basis is blocked while not calculated
+ok 8 - accepted line needs a basis and final days; rejected must be zero
+ok 9 - migration of production 0.4.0 record
+ok 10 - migration of pre-0.4 boolean fields and legacy examiner flags
+ok 11 - new field names take precedence over legacy names
+ok 12 - 0.5.0 records are normalised, not replaced
+ok 13 - summary distinguishes the four totals
+ok 14 - every English label has a French translation
+ok 15 - updateExaminerBasis compares numbers, not strings
+# tests 15
+# pass 15
+# fail 0
+
+== Smoke tests (Chromium) ==
+PASS  production index.html loads without script errors or 404s
+PASS  production candidate form saves a 0.4.0 record under 'SeaServiceRecord'
+PASS  dev/examiner.html loads without script errors or 404s
+PASS  end-to-end: examiner loads the record saved by production index.html
+PASS  load legacy 0.4.0 fixture from browser storage
+PASS  Converted days column follows 'Days at sea, if different' and shows Not calculated
+PASS  'Capacity verified' and 'Specialized service verified' are in the page markup (EN)
+PASS  examiner controls exist on every line with the four basis options
+PASS  adjustment reason is required when final days differ from basis
+PASS  no reason needed when final days equal the basis
+PASS  Converted days basis is flagged as not calculated
+PASS  summary shows the four distinct totals
+PASS  French: labels, Non calculé, input preserved across language switch
+PASS  save stores 0.5.0 draft separately; converted days stored as null; candidate record untouched
+PASS  reload restores the examiner draft
+PASS  import pre-0.4 JSON: legacy positionVerified/seaServiceVerified/polar/ice/DP/offshore/tanker
+PASS  no uncaught script errors during the dev session
+
+17/17 smoke tests passed.

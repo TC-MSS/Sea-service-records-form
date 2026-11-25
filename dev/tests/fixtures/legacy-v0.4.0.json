@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "0.4.0",
+  "language": "en",
+  "surname": "Tremblay",
+  "givenNames": "Marie",
+  "cdn": "123456789",
+  "applicationDate": "2026-10-01",
+  "certificate": "MASTER_500_NC",
+  "certificateHeld": "WATCHKEEPING_MATE_NC",
+  "applicantDeclaration": true,
+  "examinerComments": "Candidate record received by e-mail.",
+  "voyages": [
+    { "rank": "MATE", "vessel": "CCGS Example", "idType": "OFFICIAL", "identifier": "812345", "vesselType": "FERRY", "kw": 3000, "propulsion": "MOTOR", "gt": 2500, "voyage": "NC1", "registry": "Halifax", "watch": 8, "embark": "2025-01-01", "disembark": "2025-01-31", "daysOnBoard": 31, "daysAtSea": 31, "iceService": "NONE", "passenger": true, "transferOperation": "NONE", "fishing": false, "dpOffshore": "NONE" },
+    { "rank": "CHIEF_MATE", "vessel": "MV Northern Star", "idType": "IMO", "identifier": "9123456", "vesselType": "OIL_TANKER", "kw": 8000, "propulsion": "MOTOR", "gt": 12000, "voyage": "NC1", "registry": "St. John's", "watch": 12, "embark": "2025-03-01", "disembark": "2025-04-09", "daysOnBoard": 40, "daysAtSea": 25, "iceService": "POLAR", "passenger": false, "transferOperation": "OIL_TRANSFER", "fishing": false, "dpOffshore": "NONE" },
+    { "rank": "MATE", "vessel": "Supply One", "idType": "OFFICIAL", "identifier": "830000", "vesselType": "SUPPLY", "kw": 5000, "propulsion": "DIESEL_ELECTRIC", "gt": 3200, "voyage": "UNLIMITED", "registry": "Halifax", "watch": 12, "embark": "2025-06-01", "disembark": "2025-06-30", "daysOnBoard": 30, "daysAtSea": 30, "iceService": "NONE", "passenger": false, "transferOperation": "NONE", "fishing": false, "dpOffshore": "DP_AND_OFFSHORE" }
+  ]
+}
