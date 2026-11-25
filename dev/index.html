@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Statement of Sea Service for a Certificate (development v0.6.0)</title>
+<link rel="stylesheet" href="../css/app.css">
+<link rel="stylesheet" href="css/examiner.css">
+<link rel="stylesheet" href="css/candidate.css">
+</head>
+<body>
+
+<header class="banner">
+  <h1 data-i18n="candidatePageTitle">Statement of Sea Service for a Certificate (development v0.6.0)</h1>
+  <select id="langSelector" aria-label="Language / Langue">
+    <option value="en">English</option>
+    <option value="fr">Français</option>
+  </select>
+</header>
+
+<p class="devBanner" data-i18n="candidateBanner">Development build. Converted days are calculated automatically under TP 2293 Chapter 3 and MPR sections 115 to 117 and are subject to examiner review.</p>
+
+<section>
+  <h2 data-i18n="applicantInformation">Applicant Information</h2>
+  <div class="grid2">
+    <div><label for="surname" data-i18n="surname">Surname</label><input id="surname" autocomplete="family-name"></div>
+    <div><label for="givenNames" data-i18n="givenNames">Given Name</label><input id="givenNames" autocomplete="given-name"></div>
+    <div><label for="cdn" data-i18n="cdnNumber">CDN Number</label><input id="cdn"></div>
+    <div><label for="applicationDate" data-i18n="applicationDate">Application Date</label><input type="date" id="applicationDate"></div>
+    <div><label for="certificate" data-i18n="certificateApplied">Certificate Applied For</label><select id="certificate"></select></div>
+    <div><label for="certificateHeld" data-i18n="certificateHeld">Certificate Held</label><select id="certificateHeld"></select></div>
+  </div>
+</section>
+
+<section>
+  <h2 data-i18n="seaServiceRecords">Sea Service Records</h2>
+  <div class="tableWrap">
+  <table id="serviceTable" class="candidateTable">
+    <thead><tr>
+      <th data-i18n="line">Line</th>
+      <th data-i18n="capacity">A<br>Capacity</th>
+      <th data-i18n="vessel">B<br>Vessel</th>
+      <th data-i18n="officialImo">C<br>Official / IMO</th>
+      <th data-i18n="vesselType">D<br>Vessel Type</th>
+      <th data-i18n="kw">E<br>kW</th>
+      <th data-i18n="propulsion">F<br>Propulsion</th>
+      <th data-i18n="gt">G<br>GT</th>
+      <th data-i18n="voyage">H<br>Voyage</th>
+      <th data-i18n="registry">I<br>Registry</th>
+      <th data-i18n="watch">J<br>Watch</th>
+      <th data-i18n="iceService">K<br>Ice</th>
+      <th data-i18n="passenger">L<br>Passenger</th>
+      <th data-i18n="transferOperation">M<br>Transfer operation</th>
+      <th data-i18n="fishing">N<br>Fishing</th>
+      <th data-i18n="dpOffshore">O<br>DP / Offshore</th>
+      <th data-i18n="embark">P<br>Embark</th>
+      <th data-i18n="disembark">Q<br>Disembark</th>
+      <th data-i18n="daysOnBoard">R<br>Days on board</th>
+      <th data-i18n="daysAtSea">S<br>Days at sea, if different</th>
+      <th data-i18n="convertedDays">T<br>Converted days</th>
+      <th data-i18n="actions">Actions</th>
+    </tr></thead>
+    <tbody id="recordsBody"></tbody>
+  </table>
+  </div>
+  <button type="button" id="btnAdd" data-i18n="addVoyage">Add voyage</button>
+</section>
+
+<section>
+  <h2 data-i18n="candidateSummary">Sea Service Calculation</h2>
+  <div class="summaryGrid">
+    <div class="summaryCard">
+      <h3 data-i18n="candidateClaim">Candidate claim</h3>
+      <div><span data-i18n="totalDaysOnBoard">Total days on board</span>: <strong id="sumDaysOnBoard">0</strong></div>
+      <div><span data-i18n="totalDaysAtSea">Total days at sea</span>: <strong id="sumDaysAtSea">0</strong></div>
+    </div>
+    <div class="summaryCard">
+      <h3 data-i18n="creditedService">Credited sea service</h3>
+      <div><span data-i18n="totalConvertedDays">Total converted days</span>: <strong id="sumConvertedDays">Not calculated</strong> <span id="sumConvertedMonths"></span></div>
+      <div><span data-i18n="linesManualReview">Lines requiring manual review</span>: <span id="sumManual">0</span></div>
+      <div><span data-i18n="linesNotCalculated">Lines not calculated</span>: <span id="sumNotCalculated">0</span></div>
+      <div><span data-i18n="overlapDays">Overlapping days (not deducted)</span>: <span id="sumOverlap">0</span></div>
+      <div><span data-i18n="juniorExcess">Junior officer service above 9 months not counted (MPR s. 117)</span>: <span id="sumJuniorExcess">0</span></div>
+    </div>
+  </div>
+  <p class="note" data-i18n="calcNote">Engagement and discharge days together count as one day (TP 2293 s. 3.3(4)). Months = credited days ÷ 30 (MPR s. 115(3)).</p>
+  <h3 data-i18n="findings">Findings</h3>
+  <ul id="findings" class="findings"></ul>
+</section>
+
+<section>
+  <h2 data-i18n="applicantDeclarationTitle">Applicant Declaration</h2>
+  <label class="declaration"><input type="checkbox" id="applicantDeclaration"> <span data-i18n="declaration">I certify that the information provided in this sea service record is accurate and complete.</span></label>
+</section>
+
+<section class="noPrint">
+  <div class="toolbar">
+    <button type="button" id="btnSave" data-i18n="save">Save</button>
+    <button type="button" id="btnExport" data-i18n="exportJson">Export JSON</button>
+    <button type="button" id="btnPrint" data-i18n="print">Print</button>
+    <button type="button" id="btnNew" data-i18n="newRecord">New record</button>
+  </div>
+  <div id="statusPanel" role="status" aria-live="polite"></div>
+</section>
+
+<script type="module" src="js/candidate.js"></script>
+</body>
+</html>

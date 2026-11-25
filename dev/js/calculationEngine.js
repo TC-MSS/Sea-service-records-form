@@ -1,12 +1,16 @@
 /**
- * Calculation engine — v0.5.0 development build.
+ * Calculation engine — v0.6.0 development build.
  *
- * Scope of this build: candidate day counts and examiner-basis resolution only.
- * TP 2293 conversion rates are deliberately NOT implemented: converted days are
- * reserved as null ("Not calculated") and must never be stored as zero.
+ * Candidate day counts, examiner-basis resolution and the entry point to the
+ * TP 2293 / MPR conversion engine (tp2293Engine.js).
+ * Converted days are null when they cannot be calculated — never zero.
  */
+import { serviceDaysOnBoard, convertAll } from "./tp2293Engine.js";
 
-/** Inclusive day count between two ISO dates (YYYY-MM-DD). Null when invalid. */
+/**
+ * Inclusive calendar-day count (kept for reference / backward compatibility).
+ * NOT used for sea service: see serviceDaysOnBoard (TP 2293 s. 3.3(4)).
+ */
 export function inclusiveDays(embarkationDate, disembarkationDate) {
   if (!embarkationDate || !disembarkationDate) return null;
   const start = new Date(`${embarkationDate}T00:00:00`);
@@ -24,7 +28,8 @@ export function toNumberOrNull(value) {
 
 /**
  * Recompute days on board / days at sea from the candidate entries.
- * - Both dates present: days on board are recalculated (null if invalid).
+ * - Both dates present: days on board = discharge − engagement, the engagement and
+ *   discharge days together counting as one day (TP 2293 s. 3.3(4), Table 1 (A)).
  * - No dates at all: a legacy day count already on the record is retained.
  * - Only one date: days on board are null (incomplete).
  */
@@ -32,7 +37,7 @@ export function updateCandidateDays(voyage) {
   const d = voyage.dates;
   const hasStart = Boolean(d.embarkationDate);
   const hasEnd = Boolean(d.disembarkationDate);
-  if (hasStart && hasEnd) d.daysOnBoard = inclusiveDays(d.embarkationDate, d.disembarkationDate);
+  if (hasStart && hasEnd) d.daysOnBoard = serviceDaysOnBoard(d.embarkationDate, d.disembarkationDate);
   else if (hasStart || hasEnd) d.daysOnBoard = null;
   else d.daysOnBoard = toNumberOrNull(d.daysOnBoard);
 
@@ -70,7 +75,18 @@ export function updateExaminerBasis(voyage) {
   return voyage;
 }
 
-/** Reserve the conversion fields: not calculated, stored as null (never 0). */
+/**
+ * Full recalculation of a record's lines: candidate days, TP 2293 conversion,
+ * overlap check, then the examiner basis (which may point at converted days).
+ */
+export function recalculateVoyages(voyages) {
+  voyages.forEach(updateCandidateDays);
+  convertAll(voyages);
+  voyages.forEach(updateExaminerBasis);
+  return voyages;
+}
+
+/** Reset the conversion fields to "not calculated" (null, never 0). */
 export function reserveConvertedDays(voyage) {
   voyage.calculation.conversionStatus = "NOT_CALCULATED";
   voyage.calculation.conversionRate = null;

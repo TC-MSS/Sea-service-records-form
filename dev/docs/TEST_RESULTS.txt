@@ -1,11 +1,13 @@
-Test run: 2026-11-25T00:41Z  Node v22.23.5
+Test run: 2026-11-25T01:54Z  Node v22.23.5  Package 0.6.0-dev.1
 
 == Syntax ==
 OK   data/certificates.json
 OK   data/vesselThresholds.json
 OK   data/voyages.json
 OK   dev/examiner.html
+OK   dev/index.html
 OK   dev/js/calculationEngine.js  (module)
+OK   dev/js/candidate.js  (module)
 OK   dev/js/dataModel.js  (module)
 OK   dev/js/examiner.js  (module)
 OK   dev/js/examinerI18n.js  (module)
@@ -14,6 +16,7 @@ OK   dev/js/migrationEngine.js  (module)
 OK   dev/js/referenceData.js  (module)
 OK   dev/js/storageEngine.js  (module)
 OK   dev/js/summaryEngine.js  (module)
+OK   dev/js/tp2293Engine.js  (module)
 OK   dev/js/validationEngine.js  (module)
 OK   dev/package.json
 OK   dev/tests/fixtures/legacy-pre-0.4.json
@@ -21,6 +24,7 @@ OK   dev/tests/fixtures/legacy-v0.4.0.json
 OK   dev/tests/fixtures/record-v0.5.0-partial.json
 OK   dev/tests/model.test.mjs  (module)
 OK   dev/tests/smoke.mjs  (module)
+OK   dev/tests/tp2293.test.mjs  (module)
 OK   dev/tools/check-deps.mjs  (module)
 OK   dev/tools/check-syntax.mjs  (module)
 OK   examiner.html  WARNING: <!DOCTYPE html> is not the first token (quirks mode)
@@ -48,13 +52,28 @@ All syntax checks passed.
 == Dependencies ==
 Repository root: /home/claude/repo
 
-Entry pages: dev/examiner.html, examiner.html, index.html, records.html
+Entry pages: dev/examiner.html, dev/index.html, examiner.html, index.html, records.html
 
 Reference graph:
   dev/examiner.html
     -> [script] dev/js/examiner.js
     -> [link] css/app.css
     -> [link] dev/css/examiner.css
+  dev/index.html
+    -> [script] dev/js/candidate.js
+    -> [link] css/app.css
+    -> [link] dev/css/examiner.css
+    -> [link] dev/css/candidate.css
+  dev/js/calculationEngine.js
+    -> [import] dev/js/tp2293Engine.js
+  dev/js/candidate.js
+    -> [import] dev/js/examinerI18n.js
+    -> [import] dev/js/referenceData.js
+    -> [import] dev/js/dataModel.js
+    -> [import] dev/js/calculationEngine.js
+    -> [import] dev/js/validationEngine.js
+    -> [import] dev/js/summaryEngine.js
+    -> [import] dev/js/storageEngine.js
   dev/js/examiner.js
     -> [import] dev/js/examinerI18n.js
     -> [import] dev/js/referenceData.js
@@ -62,6 +81,7 @@ Reference graph:
     -> [import] dev/js/validationEngine.js
     -> [import] dev/js/summaryEngine.js
     -> [import] dev/js/calculationEngine.js
+    -> [import] dev/js/tp2293Engine.js
     -> [import] dev/js/storageEngine.js
   dev/js/examinerReview.js
     -> [import] dev/js/calculationEngine.js
@@ -73,6 +93,7 @@ Reference graph:
     -> [import] dev/js/migrationEngine.js
   dev/js/summaryEngine.js
     -> [import] dev/js/dataModel.js
+    -> [import] dev/js/tp2293Engine.js
   dev/js/validationEngine.js
     -> [import] dev/js/dataModel.js
   dev/tests/model.test.mjs
@@ -83,6 +104,10 @@ Reference graph:
     -> [import] dev/js/validationEngine.js
     -> [import] dev/js/summaryEngine.js
     -> [import] dev/js/examinerI18n.js
+  dev/tests/tp2293.test.mjs
+    -> [import] dev/js/dataModel.js
+    -> [import] dev/js/calculationEngine.js
+    -> [import] dev/js/tp2293Engine.js
   examiner.html
     -> [script] js/examiner-labels.js
   index.html
@@ -112,42 +137,66 @@ Unreferenced files (13):
 All local references resolve. OK
 
 == Unit tests ==
-ok 1 - inclusive day count
-ok 2 - days at sea: blank uses days on board; different flagged
-ok 3 - converted days default to null, never zero
-ok 4 - examiner basis options are exactly the four required
-ok 5 - adjustment reason required when final differs from basis
-ok 6 - manual determination always requires a reason
-ok 7 - converted-days basis is blocked while not calculated
-ok 8 - accepted line needs a basis and final days; rejected must be zero
-ok 9 - migration of production 0.4.0 record
-ok 10 - migration of pre-0.4 boolean fields and legacy examiner flags
-ok 11 - new field names take precedence over legacy names
-ok 12 - 0.5.0 records are normalised, not replaced
-ok 13 - summary distinguishes the four totals
-ok 14 - every English label has a French translation
-ok 15 - updateExaminerBasis compares numbers, not strings
-# tests 15
-# pass 15
+ok 1 - inclusive calendar count is still available (reference only)
+ok 2 - days on board follow TP 2293 s. 3.3(4): engagement + discharge days = one day
+ok 3 - days at sea: blank uses days on board; different flagged
+ok 4 - converted days: null when not calculable (never zero), calculated otherwise
+ok 5 - examiner basis options are exactly the four required
+ok 6 - adjustment reason required when final differs from basis
+ok 7 - converted-days basis uses the calculated value
+ok 8 - converted-days basis is blocked when the line needs manual review
+ok 9 - manual determination always requires a reason
+ok 10 - accepted line needs a basis and final days; rejected must be zero
+ok 11 - migration of production 0.4.0 record
+ok 12 - migration of pre-0.4 boolean fields and legacy examiner flags
+ok 13 - new field names take precedence over legacy names
+ok 14 - 0.5.0 records are normalised and recalculated, not replaced
+ok 15 - summary distinguishes the four totals
+ok 16 - every English label has a French translation; renamed name field
+ok 17 - updateExaminerBasis compares numbers, not strings
+ok 18 - R1 TP 2293 3.3(1),(4) Table 1 (A): discharge − engagement, minimum 1
+ok 19 - R2 MPR 115(1): 8-hour watch, 1 day = 1 day
+ok 20 - R3 MPR 115(2) / TP 2293 3.5(1): 12-hour watch = 1.5 days, rounded down
+ok 21 - R3 proration for other watch lengths, capped at 12 h
+ok 22 - R4 MPR 115(2): cadet — any service in a day = 1 day, no 12-h proration or attestation
+ok 23 - R5 TP 2293 3.7(1)(a): 8-h watch on days under way = min(1.5 × B, A)
+ok 24 - R5 TP 2293 3.7(1)(b): 12-h watch = min(2.25 × B, 1.5 × A)
+ok 25 - R5 TP 2293 Table 1 worked example (A = 100, B = 60)
+ok 26 - R5 days under way with a watch other than 8 or 12 h → manual review
+ok 27 - days at sea greater than days on board → calculation error, null
+ok 28 - R6 MPR 117: junior officer credited at 2/3 and capped at 9 months overall
+ok 29 - R7 MPR 115(3): months = days ÷ 30
+ok 30 - R8 TP 2293 3.3(2): overlapping dates are flagged; sharing a change-over day is not
+ok 31 - TP 2293 3.20 / 3.21: MOU not on DP → manual review; MOU on DP → normal rate
+ok 32 - TP 2293 3.25: barge — deck service manual review, engine service calculated
+ok 33 - explanations are produced in both languages with references
+ok 34 - missing dates → not calculated, null
+# tests 34
+# pass 34
 # fail 0
 
 == Smoke tests (Chromium) ==
 PASS  production index.html loads without script errors or 404s
+PASS  production form label reads 'Given Name' / 'Prénom'
 PASS  production candidate form saves a 0.4.0 record under 'SeaServiceRecord'
 PASS  dev/examiner.html loads without script errors or 404s
 PASS  end-to-end: examiner loads the record saved by production index.html
 PASS  load legacy 0.4.0 fixture from browser storage
-PASS  Converted days column follows 'Days at sea, if different' and shows Not calculated
+PASS  Converted days column follows 'Days at sea, if different' and shows TP 2293 values
 PASS  'Capacity verified' and 'Specialized service verified' are in the page markup (EN)
 PASS  examiner controls exist on every line with the four basis options
 PASS  adjustment reason is required when final days differ from basis
 PASS  no reason needed when final days equal the basis
-PASS  Converted days basis is flagged as not calculated
+PASS  Converted days basis uses the calculated value
 PASS  summary shows the four distinct totals
-PASS  French: labels, Non calculé, input preserved across language switch
-PASS  save stores 0.5.0 draft separately; converted days stored as null; candidate record untouched
+PASS  French: labels, months, input preserved across language switch
+PASS  save stores 0.5.0 draft separately with calculated days; candidate record untouched
 PASS  reload restores the examiner draft
 PASS  import pre-0.4 JSON: legacy positionVerified/seaServiceVerified/polar/ice/DP/offshore/tanker
+PASS  dev/index.html loads, converts the production record and shows Given Name
+PASS  candidate form calculates automatically as the candidate types
+PASS  candidate form: French labels and manual review display
+PASS  candidate save uses its own key; examiner loads it with calculated days
 PASS  no uncaught script errors during the dev session
 
-17/17 smoke tests passed.
+22/22 smoke tests passed.

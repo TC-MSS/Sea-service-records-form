@@ -6,7 +6,8 @@ import { CAPACITIES, VESSEL_TYPES, CERTIFICATES, PROPULSION, VOYAGE_CLASSES, lab
 import { applyExaminerReview, EXAMINER_INPUT_FIELDS } from "./examinerReview.js";
 import { validateVoyage } from "./validationEngine.js";
 import { buildSummary } from "./summaryEngine.js";
-import { toNumberOrNull } from "./calculationEngine.js";
+import { toNumberOrNull, recalculateVoyages } from "./calculationEngine.js";
+import { RULES_VERSION } from "./tp2293Engine.js";
 import * as storage from "./storageEngine.js";
 
 const $ = (id) => document.getElementById(id);
@@ -43,11 +44,14 @@ function specializedText(v) {
   return parts.length ? parts.map(esc).join("<br>") : t(language, "none");
 }
 
-function convertedText(v) {
-  return v.calculation.convertedDays === null || v.calculation.convertedDays === undefined
-    ? `<span class="notCalculated">${esc(t(language, "notCalculated"))}</span>`
-    : esc(v.calculation.convertedDays);
+function convertedCell(v, lang) {
+  const c = v.calculation;
+  const title = esc(lang === "fr" ? c.explanationFr : c.explanationEn);
+  if (c.conversionStatus === "CALCULATED" && c.convertedDays !== null) return `<span class="converted" title="${title}">${esc(c.convertedDays)}</span>`;
+  const key = c.conversionStatus === "MANUAL_REVIEW_REQUIRED" ? "manualReview" : c.conversionStatus === "CALCULATION_ERROR" ? "calculationError" : "notCalculated";
+  return `<span class="notCalculated" title="${title}">${esc(t(lang, key))}</span>`;
 }
+const convertedText = (v) => convertedCell(v, language);
 
 function voyageRowHtml(v, i) {
   const d = v.dates;
@@ -99,6 +103,7 @@ function refreshLine(index) {
   const voyageResult = validateVoyage(v);
   const r = v.examinerReview;
 
+  panel.querySelector(".calcText").textContent = language === "fr" ? v.calculation.explanationFr : v.calculation.explanationEn;
   panel.querySelector(".basisDays").textContent =
     r.examinerBasis === "CONVERTED_DAYS" && r.basisDays === null ? t(language, "notCalculated")
       : r.basisDays === null ? "—" : String(r.basisDays);
@@ -129,8 +134,16 @@ function refreshSummary() {
   record.examinerAssessment.totalFinalAcceptedDays = s.examinerDetermination.totalFinalAcceptedDays;
   $("sumDaysOnBoard").textContent = s.candidateClaim.totalDaysOnBoard;
   $("sumDaysAtSea").textContent = s.candidateClaim.totalDaysAtSea;
-  $("sumConvertedDays").textContent = s.automatedCalculation.totalConvertedDays === null ? t(language, "notCalculated") : s.automatedCalculation.totalConvertedDays;
+  const ac = s.automatedCalculation;
+  $("sumConvertedDays").textContent = ac.totalConvertedDays === null ? t(language, "notCalculated") : ac.totalConvertedDays;
+  $("sumConvertedMonths").textContent = ac.totalConvertedMonths === null ? "" : `(${monthsText(ac.totalConvertedMonths)})`;
+  $("sumManual").textContent = ac.recordsRequiringManualReview;
+  $("sumNotCalculated").textContent = ac.recordsNotCalculated;
+  $("sumOverlap").textContent = ac.overlapDays;
+  $("sumJuniorExcess").textContent = ac.juniorOfficerExcessDays;
+  $("sumRules").textContent = ac.rulesVersion || RULES_VERSION;
   $("sumFinalAcceptedDays").textContent = s.examinerDetermination.totalFinalAcceptedDays;
+  $("sumFinalAcceptedMonths").textContent = `(${monthsText(s.examinerDetermination.totalFinalAcceptedMonths)})`;
   $("sumReviewed").textContent = s.examinerDetermination.recordsReviewed;
   $("sumNotReviewed").textContent = s.examinerDetermination.recordsNotReviewed;
   $("sumAccepted").textContent = s.examinerDetermination.recordsAccepted;
@@ -139,6 +152,11 @@ function refreshSummary() {
   $("sumRejected").textContent = s.examinerDetermination.recordsRejected;
   $("sumErrors").textContent = linesWithErrors;
   return linesWithErrors;
+}
+
+function monthsText(m) {
+  const n = language === "fr" ? String(m).replace(".", ",") : String(m);
+  return `${n} ${t(language, "months")}`;
 }
 
 const lineErrorState = new Map();
@@ -200,6 +218,7 @@ function render() {
 
 function loadInto(newRecord, fromLegacy) {
   record = newRecord;
+  recalculateVoyages(record.voyages);
   render();
   if (fromLegacy && record.migration) setStatus("loadedLegacy", { from: record.migration.fromSchemaVersion });
   else setStatus("loaded");

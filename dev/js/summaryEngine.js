@@ -4,10 +4,11 @@
  * Distinguishes four totals:
  *  - total days on board    (candidate claim, column R)
  *  - total days at sea      (candidate claim, column S or R when S is blank)
- *  - total converted days   (null = "Not calculated" until TP 2293 rates are implemented)
+ *  - total converted days   (TP 2293 / MPR credited days; null when no line could be calculated)
  *  - total final accepted   (examiner determination; ACCEPTED and ACCEPTED_WITH_ADJUSTMENT lines only)
  */
 import { createEmptySummary } from "./dataModel.js";
+import { totals as conversionTotals, RULES_VERSION } from "./tp2293Engine.js";
 
 export function buildSummary(voyages = []) {
   const s = createEmptySummary();
@@ -15,13 +16,6 @@ export function buildSummary(voyages = []) {
   for (const v of voyages) {
     s.candidateClaim.totalDaysOnBoard += Number(v.dates.daysOnBoard ?? 0);
     s.candidateClaim.totalDaysAtSea += Number(v.dates.daysAtSeaEffective ?? 0);
-
-    const c = v.calculation;
-    if (c.conversionStatus === "CALCULATED" && c.convertedDays !== null) {
-      s.automatedCalculation.recordsCalculated += 1;
-      s.automatedCalculation.totalConvertedDays = Number(s.automatedCalculation.totalConvertedDays ?? 0) + Number(c.convertedDays);
-    } else if (c.conversionStatus === "MANUAL_REVIEW_REQUIRED") s.automatedCalculation.recordsRequiringManualReview += 1;
-    else s.automatedCalculation.recordsNotCalculated += 1;
 
     const r = v.examinerReview;
     const e = s.examinerDetermination;
@@ -34,5 +28,9 @@ export function buildSummary(voyages = []) {
       e.totalFinalAcceptedDays += Number(r.finalAcceptedDays);
     }
   }
+  s.examinerDetermination.totalFinalAcceptedMonths = Math.floor((s.examinerDetermination.totalFinalAcceptedDays / 30) * 100) / 100;
+  s.automatedCalculation = { ...s.automatedCalculation, ...conversionTotals(voyages), rulesVersion: RULES_VERSION };
+  if (s.automatedCalculation.juniorOfficerExcessDays > 0) s.warnings.push("JUNIOR_OFFICER_CAP_APPLIED");
+  if (s.automatedCalculation.overlapDays > 0) s.warnings.push("OVERLAPPING_SERVICE");
   return s;
 }

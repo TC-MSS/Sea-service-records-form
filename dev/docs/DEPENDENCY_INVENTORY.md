@@ -106,22 +106,25 @@ Development package (new):
 - `dev/js/dataModel.js`, `calculationEngine.js`, `migrationEngine.js`, `validationEngine.js`, `summaryEngine.js`, `storageEngine.js`, `examinerReview.js`, `examinerI18n.js`, `referenceData.js`, `examiner.js`
 - `dev/tests/*`, `dev/tools/*`, `dev/package.json`, `dev/README-DEV.md`, `dev/docs/*`
 
-## 7. Development package reference graph
+## 7. Development package reference graph (v0.6.0-dev.1)
 
 ```
-dev/examiner.html
- ├─ ../css/app.css                [link]  (shared, read-only)
- ├─ css/examiner.css              [link]
- └─ js/examiner.js                [module]
-     ├─ examinerI18n.js
-     ├─ referenceData.js
-     ├─ examinerReview.js ─┬─ calculationEngine.js
-     │                     └─ validationEngine.js ── dataModel.js
-     ├─ validationEngine.js
-     ├─ summaryEngine.js ── dataModel.js
-     ├─ calculationEngine.js
-     └─ storageEngine.js ── migrationEngine.js ─┬─ dataModel.js
-                                                └─ calculationEngine.js
-dev/tests/model.test.mjs  → dev/js/* + tests/fixtures/*.json   (Node test runner)
-dev/tests/smoke.mjs       → serves repo root; loads index.html and dev/examiner.html (Playwright)
+dev/index.html  (candidate form)                 dev/examiner.html
+ ├─ ../css/app.css  (shared, read-only)           ├─ ../css/app.css
+ ├─ css/examiner.css                              ├─ css/examiner.css
+ ├─ css/candidate.css                             └─ js/examiner.js
+ └─ js/candidate.js                                    ├─ examinerI18n.js, referenceData.js
+      ├─ examinerI18n.js, referenceData.js             ├─ examinerReview.js ─ calculationEngine.js, validationEngine.js
+      ├─ dataModel.js                                  ├─ validationEngine.js ─ dataModel.js
+      ├─ calculationEngine.js ─ tp2293Engine.js        ├─ summaryEngine.js ─ dataModel.js, tp2293Engine.js
+      ├─ validationEngine.js                           ├─ calculationEngine.js ─ tp2293Engine.js
+      ├─ summaryEngine.js                              ├─ tp2293Engine.js
+      └─ storageEngine.js ─ migrationEngine.js         └─ storageEngine.js ─ migrationEngine.js ─ dataModel.js, calculationEngine.js
+
+dev/tests/model.test.mjs, tp2293.test.mjs → dev/js/* + tests/fixtures/*.json  (Node test runner)
+dev/tests/smoke.mjs → serves the repo root; loads index.html, dev/index.html, dev/examiner.html (Playwright)
 ```
+
+New files that must be retained with the dev package: `dev/index.html`, `dev/css/candidate.css`, `dev/js/candidate.js`, `dev/js/tp2293Engine.js`, `dev/tests/tp2293.test.mjs`, `dev/docs/CALCULATION_RULES.md`.
+
+`js/tp2293Calculation.js` and the watch table in `js/seaServiceCalculator.js` are now superseded by `dev/js/tp2293Engine.js`. The production calculator stays in place until the production candidate form is replaced.

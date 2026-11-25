@@ -2,6 +2,7 @@
  * Validation engine — v0.5.0 development build.
  * Returns codes; the UI translates them (see examinerI18n.js).
  * Certificate eligibility is intentionally out of scope for this build.
+ * Conversion (TP 2293) warnings are surfaced as line warnings.
  */
 import { ENUMS } from "./dataModel.js";
 
@@ -14,6 +15,10 @@ export function validateVoyage(voyage) {
   if (d.daysAtSeaEntered !== null && d.daysOnBoard !== null && Number(d.daysAtSeaEntered) > d.daysOnBoard) errors.push("DAYS_AT_SEA_EXCEED_ONBOARD");
   if (!ENUMS.reviewStatus.includes(voyage.examinerReview.reviewStatus)) errors.push("INVALID_REVIEW_STATUS");
   for (const w of voyage.metadata?.legacyWarnings || []) warnings.push(w);
+  const calc = voyage.calculation || {};
+  for (const w of [...(calc.errors || []), ...(calc.warnings || [])]) {
+    if (!errors.includes(w) && !warnings.includes(w)) warnings.push(w);
+  }
   return { valid: errors.length === 0, errors, warnings };
 }
 

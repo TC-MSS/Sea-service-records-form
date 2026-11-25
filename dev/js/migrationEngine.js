@@ -11,7 +11,7 @@
  * nothing entered under an older version is lost.
  */
 import { createVoyage, createSeaServiceRecord, createExaminerReview, fillDefaults, SCHEMA_VERSION, APPLICATION_VERSION } from "./dataModel.js";
-import { reserveConvertedDays, toNumberOrNull, updateCandidateDays, updateExaminerBasis } from "./calculationEngine.js";
+import { recalculateVoyages, toNumberOrNull, updateCandidateDays } from "./calculationEngine.js";
 
 const LEGACY_VOYAGE_FLAGS = [
   "positionVerified", "seaServiceVerified", "tanker", "tankerService", "oilTanker", "chemicalTanker", "lngTanker",
@@ -90,8 +90,6 @@ export function migrateVoyageToV050(old = {}, sequenceNumber = 1) {
   v.examinerReview.capacityVerified = truthy(old.capacityVerified ?? old.positionVerified);
   v.examinerReview.specializedServiceVerified = truthy(old.specializedServiceVerified ?? old.seaServiceVerified);
 
-  reserveConvertedDays(v);
-  updateExaminerBasis(v);
   v.metadata.legacyFields = pickLegacy(old, LEGACY_VOYAGE_FLAGS);
   v.metadata.legacyFieldsConverted = true;
   return v;
@@ -102,10 +100,7 @@ export function normaliseVoyage(v, sequenceNumber) {
   const template = createVoyage(sequenceNumber);
   fillDefaults(v, template);
   fillDefaults(v.examinerReview, createExaminerReview());
-  if (v.calculation.convertedDays === undefined || v.calculation.convertedDays === "") v.calculation.convertedDays = null;
-  if (v.calculation.conversionStatus !== "CALCULATED") v.calculation.convertedDays = null;
   updateCandidateDays(v);
-  updateExaminerBasis(v);
   return v;
 }
 
@@ -114,6 +109,7 @@ export function migrateRecordToV050(old = {}) {
     const r = old;
     fillDefaults(r, createSeaServiceRecord(r.language || "en"));
     r.voyages = (r.voyages || []).map((v, i) => normaliseVoyage(v, i + 1));
+    recalculateVoyages(r.voyages);
     return r;
   }
   const r = createSeaServiceRecord(old.language || "en");
@@ -130,6 +126,7 @@ export function migrateRecordToV050(old = {}) {
   r.application.certificateHeld.code = old.certificateHeld || old.application?.certificateHeld?.code || "";
   r.examinerAssessment.generalComments = old.examinerComments || "";
   r.voyages = (old.voyages || []).map((v, i) => migrateVoyageToV050(v, i + 1));
+  recalculateVoyages(r.voyages);
   r.migration = {
     fromSchemaVersion: old.schemaVersion || "pre-0.4",
     migratedAt: new Date().toISOString(),
