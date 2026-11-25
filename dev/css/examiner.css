@@ -1,0 +1,69 @@
+/* Examiner review page — v0.5.0 development additions (loaded after ../css/app.css) */
+
+.devBanner{
+    margin:10px 20px;
+    padding:8px 12px;
+    background:#fff4e5;
+    border-left:4px solid #b45f06;
+    color:#5c3200;
+    font-weight:600;
+}
+
+.toolbar{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+.toolbar button{ margin:0; }
+.fileButton{ display:inline-flex; align-items:center; margin:0; cursor:pointer; font-size:13.33px;
+    background:#003366; color:#fff; padding:10px 15px; border-radius:4px; font-weight:normal; }
+.fileButton:hover{ background:#00509e; }
+.fileButton input{ display:none; }
+
+.infoGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px 20px; margin:0; }
+.infoGrid dt{ font-weight:600; color:#003366; }
+.infoGrid dd{ margin:2px 0 0; }
+
+.tableWrap{ overflow-x:auto; }
+#serviceTable td.num{ text-align:right; white-space:nowrap; }
+#serviceTable td.specialized{ font-size:12px; }
+.notCalculated{ color:#6b6b6b; font-style:italic; white-space:nowrap; }
+
+tr.voyageRow td{ background:#f6f9fc; font-weight:600; }
+tr.reviewRow > td{ padding:0 0 14px 0; border-left:4px solid #003366; background:#fff; }
+
+.reviewPanel{ padding:10px 14px; }
+.reviewPanel h3{ margin:4px 0 8px; font-size:15px; color:#003366; }
+.reviewPanel.hasErrors{ border-left:4px solid #b00020; }
+.examinerOnlyTag{ font-size:11px; font-weight:600; background:#003366; color:#fff; padding:2px 6px; border-radius:3px; vertical-align:middle; }
+
+.verifyGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:6px 12px; border:1px solid #dfdfdf; border-radius:6px; padding:8px 10px; margin:0 0 10px; }
+.verifyGrid legend{ font-weight:600; padding:0 4px; }
+.verifyGrid label{ display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; }
+.verifyGrid input[type="checkbox"]{ width:auto; }
+
+.reviewGrid{ display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px 14px; align-items:end; }
+.reviewGrid label{ margin:0; }
+.reviewGrid label > span{ display:block; margin-bottom:3px; }
+.reviewGrid .wide{ grid-column:span 2; }
+.basisDaysBox{ font-weight:600; }
+.basisDaysBox output{ display:block; padding:8px; border:1px dashed #c8c8c8; border-radius:4px; background:#fafafa; font-weight:normal; min-height:36px; }
+.adjustmentLabel.required > span{ color:#b00020; }
+.adjustmentLabel.required textarea{ border-color:#b00020; }
+
+.messages{ margin:8px 0 0; padding-left:18px; font-size:13px; }
+.messages li.error{ color:#b00020; }
+.messages li.warning{ color:#7a4d00; }
+
+.summaryGrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+.summaryCard{ background:#eef4ff; border-left:4px solid #003366; padding:10px 14px; }
+.summaryCard h3{ margin:0 0 6px; font-size:15px; }
+.summaryCard div{ margin:3px 0; }
+.note{ font-size:13px; color:#555; }
+
+@media (max-width:900px){
+    .reviewGrid{ grid-template-columns:1fr 1fr; }
+}
+
+@media print{
+    .noPrint, #langSelector{ display:none !important; }
+    .tableWrap{ overflow:visible; }
+    table{ font-size:10px; }
+    tr.reviewRow{ page-break-inside:avoid; }
+}

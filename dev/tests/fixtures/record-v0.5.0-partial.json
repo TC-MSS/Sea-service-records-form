@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "0.5.0",
+  "recordId": "SSR-test-0001",
+  "language": "fr",
+  "candidate": { "surname": "Gagnon", "givenNames": "Luc", "cdnNumber": "111222333" },
+  "voyages": [
+    {
+      "voyageId": "VOY-1",
+      "dates": { "embarkationDate": "2024-05-01", "disembarkationDate": "2024-05-10", "daysAtSeaEntered": 8 },
+      "examinerReview": { "reviewStatus": "ACCEPTED", "examinerBasis": "DAYS_AT_SEA", "finalAcceptedDays": 8, "capacityVerified": true }
+    }
+  ]
+}
