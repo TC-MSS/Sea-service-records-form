@@ -67,3 +67,7 @@ tr.reviewRow > td{ padding:0 0 14px 0; border-left:4px solid #003366; background
     table{ font-size:10px; }
     tr.reviewRow{ page-break-inside:avoid; }
 }
+
+/* v0.6.0 — calculation display */
+.converted{ font-weight:700; color:#0b5d1e; cursor:help; border-bottom:1px dotted #0b5d1e; }
+.calcExplanation{ margin:8px 0 0; font-size:13px; background:#f1f7f1; border-left:3px solid #0b5d1e; padding:6px 10px; }

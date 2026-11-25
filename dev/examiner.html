@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sea Service Records — Examiner Review (development v0.5.0)</title>
+<title>Sea Service Records — Examiner Review (development v0.6.0)</title>
 <link rel="stylesheet" href="../css/app.css">
 <link rel="stylesheet" href="css/examiner.css">
 </head>
 <body>
 
 <header class="banner">
-  <h1 data-i18n="pageTitle">Sea Service Records — Examiner Review (development v0.5.0)</h1>
+  <h1 data-i18n="pageTitle">Sea Service Records — Examiner Review (development v0.6.0)</h1>
   <select id="langSelector" aria-label="Language / Langue">
     <option value="en">English</option>
     <option value="fr">Français</option>
   </select>
 </header>
 
-<p class="devBanner" data-i18n="devBanner">Development build — not for production assessments. Converted days and certificate eligibility are not yet calculated.</p>
+<p class="devBanner" data-i18n="devBanner">Development build — converted days are calculated automatically (TP 2293 Ch. 3, MPR ss. 115–117) and must be verified. Certificate eligibility is not yet calculated.</p>
 
 <section class="noPrint">
   <h2 data-i18n="recordActions">Record</h2>
@@ -38,7 +38,7 @@
   <h2 data-i18n="applicantInformation">Applicant Information</h2>
   <dl class="infoGrid">
     <div><dt data-i18n="surname">Surname</dt><dd id="infoSurname">—</dd></div>
-    <div><dt data-i18n="givenNames">Given Names</dt><dd id="infoGivenNames">—</dd></div>
+    <div><dt data-i18n="givenNames">Given Name</dt><dd id="infoGivenNames">—</dd></div>
     <div><dt data-i18n="cdnNumber">CDN Number</dt><dd id="infoCdn">—</dd></div>
     <div><dt data-i18n="applicationDate">Application Date</dt><dd id="infoApplicationDate">—</dd></div>
     <div><dt data-i18n="certificateApplied">Certificate Applied For</dt><dd id="infoCertificate">—</dd></div>
@@ -117,6 +117,7 @@
         <textarea rows="2" data-field="examinerComments"></textarea>
       </label>
     </div>
+    <p class="calcExplanation"><strong data-i18n="calculation">Calculation (TP 2293 / MPR)</strong>: <span class="calcText"></span></p>
     <ul class="messages" aria-live="polite"></ul>
   </div>
 </template>
@@ -139,11 +140,16 @@
     </div>
     <div class="summaryCard">
       <h3 data-i18n="automatedCalculation">Automated calculation</h3>
-      <div><span data-i18n="totalConvertedDays">Total converted days</span>: <strong id="sumConvertedDays">Not calculated</strong></div>
+      <div><span data-i18n="totalConvertedDays">Total converted days</span>: <strong id="sumConvertedDays">Not calculated</strong> <span id="sumConvertedMonths"></span></div>
+      <div><span data-i18n="linesManualReview">Lines requiring manual review</span>: <span id="sumManual">0</span></div>
+      <div><span data-i18n="linesNotCalculated">Lines not calculated</span>: <span id="sumNotCalculated">0</span></div>
+      <div><span data-i18n="overlapDays">Overlapping days (not deducted)</span>: <span id="sumOverlap">0</span></div>
+      <div><span data-i18n="juniorExcess">Junior officer service above 9 months not counted (MPR s. 117)</span>: <span id="sumJuniorExcess">0</span></div>
+      <div class="note"><span data-i18n="rulesVersion">Calculation rules</span>: <span id="sumRules">—</span></div>
     </div>
     <div class="summaryCard">
       <h3 data-i18n="examinerDetermination">Examiner determination</h3>
-      <div><span data-i18n="totalFinalAcceptedDays">Total final accepted days</span>: <strong id="sumFinalAcceptedDays">0</strong></div>
+      <div><span data-i18n="totalFinalAcceptedDays">Total final accepted days</span>: <strong id="sumFinalAcceptedDays">0</strong> <span id="sumFinalAcceptedMonths"></span></div>
       <div><span data-i18n="recordsReviewed">Lines reviewed</span>: <span id="sumReviewed">0</span></div>
       <div><span data-i18n="recordsNotReviewed">Lines not reviewed</span>: <span id="sumNotReviewed">0</span></div>
       <div><span data-i18n="recordsAccepted">Accepted</span>: <span id="sumAccepted">0</span></div>

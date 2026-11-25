@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = "0.5.0";
-export const APPLICATION_VERSION = "0.5.0-dev.1";
+export const APPLICATION_VERSION = "0.6.0-dev.1";
 
 export const ENUMS = Object.freeze({
   recordStatus: ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "ADDITIONAL_INFORMATION_REQUIRED", "ASSESSMENT_COMPLETED", "CLOSED"],
@@ -66,7 +66,7 @@ export function createVoyage(sequenceNumber = 1) {
     },
     calculation: {
       sourceType: null, sourceDays: null, conversionStatus: "NOT_CALCULATED",
-      conversionRate: null, convertedDays: null, calculationRuleId: null,
+      conversionRate: null, convertedDays: null, convertedDaysExact: null, overlaps: [], calculationRuleId: null,
       calculationRuleVersion: null, legalReference: { document: null, section: null },
       explanationEn: "", explanationFr: "", warnings: [], errors: []
     },

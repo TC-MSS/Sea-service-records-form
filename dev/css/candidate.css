@@ -1,0 +1,27 @@
+/* Candidate form — development v0.6.0 (loaded after app.css and examiner.css) */
+.candidateTable td{ vertical-align:middle; }
+.candidateTable td input, .candidateTable td select{ min-width:70px; }
+.candidateTable td input[type="date"]{ min-width:130px; }
+.candidateTable td input[type="checkbox"]{ width:auto; min-width:0; }
+.candidateTable td.center{ text-align:center; }
+.candidateTable td[data-col]{ font-weight:600; background:#f6f9fc; min-width:70px; }
+.identifierGroup{ display:flex; gap:4px; }
+.identifierGroup select{ min-width:80px; }
+.findings{ padding-left:18px; font-size:13px; }
+.findings li{ margin:3px 0; }
+.findings li.explain{ color:#1c1c1c; }
+.findings li.error{ color:#b00020; }
+.findings li.warning{ color:#7a4d00; }
+.declaration{ display:flex; gap:8px; align-items:flex-start; font-weight:normal; }
+.declaration input{ width:auto; margin-top:3px; }
+@media print{
+    .deleteBtn, #btnAdd{ display:none; }
+}
+
+/* Keep R, S and T (computed results) visible while scrolling the wide table */
+.candidateTable th:nth-last-child(2), .candidateTable td:nth-last-child(2){
+    position:sticky; right:0; z-index:1; box-shadow:-3px 0 4px rgba(0,0,0,0.08);
+}
+.candidateTable thead th:nth-last-child(2){ background:#003366; }
+.candidateTable td:nth-last-child(2){ background:#eef7ee; min-width:80px; }
+.candidateTable td input, .candidateTable td select{ min-width:60px; font-size:12px; }

@@ -1,62 +1,64 @@
-# Deployment and Acceptance-Test Checklist — dev v0.5.0-dev.1
+# Deployment and Acceptance-Test Checklist — dev v0.6.0-dev.1
 
 ## A. Pre-deployment
 
-- [ ] Package unzipped; only a new `dev/` folder is added to the repository (`git status` shows no modified production files).
-- [ ] Work is on a branch, not `main`.
-- [ ] `node dev/tools/check-syntax.mjs .` — all OK (the three quirks-mode warnings on production HTML are known).
-- [ ] `node dev/tools/check-deps.mjs .` — “All local references resolve. OK”.
-- [ ] `cd dev && node --test tests/model.test.mjs` — 15/15 pass.
-- [ ] `cd dev && node tests/smoke.mjs` — 17/17 pass.
+- [ ] A backup tag of `main` exists (for example `v0.5.0-dev`).
+- [ ] Work is on a branch (for example `dev-v0.6.0`), not `main`.
+- [ ] `node dev/tools/check-syntax.mjs .` — all OK.
+- [ ] `node dev/tools/check-deps.mjs .` — "All local references resolve. OK".
+- [ ] `cd dev && node --test tests/model.test.mjs tests/tp2293.test.mjs` — 34/34 pass.
+- [ ] `cd dev && node tests/smoke.mjs` — 22/22 pass.
+- [ ] Pull request **Files changed**: only `dev/...` files, plus `index.html` and `js/app.js` if the label patch is included. Each of those two production files should show only its label line(s) changed.
 
 ## B. Deployment
 
-- [ ] Pull request reviewed; merged to `main`.
-- [ ] GitHub Pages build completes (Actions tab / Settings › Pages).
-- [ ] `…/index.html` still loads and behaves as before (production unchanged).
-- [ ] `…/dev/examiner.html` loads; browser console shows no errors; no 404s in the Network tab.
+- [ ] Pull request merged; **Actions → pages build and deployment** shows a green check.
+- [ ] `…/index.html` (production) works as before and shows "Given Name" (if patched).
+- [ ] `…/dev/index.html` and `…/dev/examiner.html` load with no console errors and no 404s.
 
-## C. Acceptance tests (manual, in the browser)
+## C. Acceptance tests
 
 | # | Test | Expected | Pass |
 |---|---|---|---|
-| 1 | Open `index.html`, enter two voyages (one with days at sea different), Save. Open `dev/examiner.html`, click **Load candidate record**. | Both lines shown; status says converted from 0.4.0. | ☐ |
-| 2 | Look at the verification group of any line (EN). | “Capacity verified” and “Specialized service verified” visible. | ☐ |
-| 3 | Switch to Français. | “Fonction vérifiée”, “Service spécialisé vérifié”; all labels in French; entered values kept. | ☐ |
-| 4 | Look at the table header. | “T Converted days” immediately after “S Days at sea, if different”. | ☐ |
-| 5 | Converted days cells and summary. | “Not calculated” / “Non calculé”. | ☐ |
-| 6 | Each line has Review status, Examiner basis, Final accepted days, Adjustment reason, Examiner comments. | Present on every line, marked “Examiner only”. | ☐ |
-| 7 | Open the Examiner basis list. | Days on board, Days at sea, Converted days, Manual determination. | ☐ |
-| 8 | Basis = Days on board, Final = same value, Status = Accepted. | No error; Basis days shows the value. | ☐ |
-| 9 | Change Final to a different value. | Adjustment reason turns red “(required)”; error shown; warning suggests “Accepted with adjustment”. | ☐ |
-| 10 | Enter an adjustment reason. | Error clears. | ☐ |
-| 11 | Basis = Manual determination with no reason. | Reason required. | ☐ |
-| 12 | Basis = Converted days. | Basis days “Not calculated”; error asks for another basis. | ☐ |
-| 13 | Status = Rejected with final > 0. | Error “must have 0 final accepted days”. | ☐ |
-| 14 | Summary card values. | Total days on board, total days at sea, total converted days (Not calculated), total final accepted days (accepted lines only) shown separately. | ☐ |
-| 15 | **Save examiner draft**, reload page, **Load examiner draft**. | All examiner entries restored. | ☐ |
-| 16 | In DevTools › Application › Local Storage. | `SeaServiceRecord` unchanged; `SeaServiceRecord.v0.5.0` has `"convertedDays": null` on each line. | ☐ |
-| 17 | **Import JSON** `dev/tests/fixtures/legacy-pre-0.4.json`. | Line 1: Capacity verified and Specialized service verified ticked (from positionVerified / seaServiceVerified); polar + ice and DP + offshore shown; tanker warning displayed. Line 2: 45 days on board retained. | ☐ |
-| 18 | **Export JSON**. | File downloads; `schemaVersion` 0.5.0; `migration.legacyRecordFields` present for migrated records. | ☐ |
-| 19 | **Print** preview. | Toolbar hidden; table and review panels readable. | ☐ |
-| 20 | Test in Edge and Chrome (government standard browsers). | Same results. | ☐ |
+| 1 | Production `index.html`, EN then FR | Label "Given Name" / "Prénom" | ☐ |
+| 2 | `dev/index.html` EN / FR | "Given Name" / "Prénom"; all labels translated | ☐ |
+| 3 | Line: Mate, 8 h, 1 Jan → 31 Jan | R = 30, T = 30 | ☐ |
+| 4 | Same line, watch 12 | T = 45; attestation warning shown | ☐ |
+| 5 | Same line, days at sea 10 | T = 22 (min(2.25 × 10, 1.5 × 30)); "days under way" warning | ☐ |
+| 6 | Watch 8, days at sea 25 | T = 30 (min(37.5, 30)) | ☐ |
+| 7 | Capacity Deck Cadet, watch 12, no days at sea | T = 30; no attestation warning | ☐ |
+| 8 | Capacity Supernumerary Mate, 8 h, 30 days | T = 20; 9-month warning | ☐ |
+| 9 | Vessel type MOU, O = None | T = "Manual review" | ☐ |
+| 10 | Vessel type MOU, O = DP | T calculated normally; MOU warning | ☐ |
+| 11 | Vessel type Barge, deck capacity | T = "Manual review" | ☐ |
+| 12 | Two lines with overlapping dates | Overlap warning on both; "Overlapping days" in summary | ☐ |
+| 13 | Two lines where the discharge and next engagement are on the same date | No overlap warning | ☐ |
+| 14 | Days at sea greater than days on board | T = "Error"; error message | ☐ |
+| 15 | Summary | Total converted days and months (÷ 30) | ☐ |
+| 16 | Hover over a T value | Calculation explanation shown | ☐ |
+| 17 | **Save** on `dev/index.html`, then examiner **Load candidate record** | Same converted days in column T; calculation line under each review | ☐ |
+| 18 | Examiner basis "Converted days" on a calculated line | Basis days = T value; final = T needs no reason | ☐ |
+| 19 | Examiner basis "Converted days" on a manual-review line | Error asks for another basis | ☐ |
+| 20 | Production record saved by `index.html` before this release | Loads in both dev pages; R recalculated under TP 2293 s. 3.3(4) | ☐ |
+| 21 | DevTools › Local Storage | `SeaServiceRecord` unchanged by the dev pages | ☐ |
+| 22 | Compare 5 real files already assessed by hand | Differences explained by the rules in `CALCULATION_RULES.md` | ☐ |
+| 23 | Edge and Chrome | Same results | ☐ |
 
-## D. Sign-off
+## D. Decisions to confirm (see CALCULATION_RULES.md §5)
+
+- [ ] Day count: discharge − engagement (Table 1 (A))
+- [ ] Round down to whole days
+- [ ] Days-under-way method whenever S differs from R
+- [ ] MPR s. 117 applied to "Supernumerary Mate"
+
+## E. Sign-off
 
 | Role | Name | Date | Result |
 |---|---|---|---|
 | Developer | | | |
-| Examiner (functional) | | | |
-| Bilingual review (FR terminology) | | | |
+| Examiner (calculation rules) | | | |
+| Bilingual review | | | |
 
-## E. Rollback
+## F. Rollback
 
-The package adds files only. To roll back, delete the `dev/` folder (or revert the merge commit). Production pages and saved candidate records are unaffected; examiner drafts under `SeaServiceRecord.v0.5.0` can be cleared from browser storage.
-
-## F. Open items for the next increment
-
-- French terminology review of “Fonction vérifiée”, “Accepté avec rajustement”, “Base de l’examinateur”, “Détermination manuelle”.
-- Implement TP 2293 conversion rates (populate `calculation.convertedDays`, `conversionStatus = CALCULATED`).
-- Certificate eligibility (MPR / TP 2293).
-- Fix production defects listed in `DEPENDENCY_INVENTORY.md` §4 when the candidate form moves to the v0.5.0 model.
-- Remove `js/1*.js`, `records.html`, `js/translations.js`, `js/voyageAssessmentEngine.js`, `js/tp2293Calculation.js` once agreed.
+Revert the merge commit, or check out the backup tag. The dev pages only add browser storage keys and never change `SeaServiceRecord`.
