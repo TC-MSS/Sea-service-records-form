@@ -10,7 +10,7 @@ let currentLanguage = "en";
 const text = {
     en: {
         pageTitle: "Statement of Sea Service for a Certificate", applicantInformation: "Applicant Information",
-        surname: "Surname", givenNames: "Given Names", cdnNumber: "CDN Number", applicationDate: "Application Date",
+        surname: "Surname", givenNames: "Given Name", cdnNumber: "CDN Number", applicationDate: "Application Date",
         certificateApplied: "Certificate Applied For", certificateHeld: "Certificate Held", seaServiceRecords: "Sea Service Records",
         capacity: "A<br>Capacity", vessel: "B<br>Vessel", officialImo: "C<br>Official / IMO", vesselType: "D<br>Vessel Type",
         propulsion: "F<br>Propulsion", voyage: "H<br>Voyage", registry: "I<br>Registry", watch: "J<br>Watch",
@@ -31,7 +31,7 @@ const text = {
     },
     fr: {
         pageTitle: "État de service en mer pour un brevet", applicantInformation: "Renseignements sur le candidat",
-        surname: "Nom de famille", givenNames: "Prénoms", cdnNumber: "Numéro CDN", applicationDate: "Date de la demande",
+        surname: "Nom de famille", givenNames: "Prénom", cdnNumber: "Numéro CDN", applicationDate: "Date de la demande",
         certificateApplied: "Brevet demandé", certificateHeld: "Brevet détenu", seaServiceRecords: "États de service en mer",
         capacity: "A<br>Fonction", vessel: "B<br>Bâtiment", officialImo: "C<br>Numéro officiel / OMI", vesselType: "D<br>Type de bâtiment",
         propulsion: "F<br>Propulsion", voyage: "H<br>Voyage", registry: "I<br>Immatriculation", watch: "J<br>Quart",
