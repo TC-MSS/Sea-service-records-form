@@ -1,5 +1,5 @@
 /**
- * Unit tests — v0.5.0 data model, migration, examiner review, summary (updated for v0.7.0).
+ * Unit tests — v0.5.0 data model, migration, examiner review, summary (updated for v0.8.0).
  * Run: node --test dev/tests/model.test.mjs dev/tests/tp2293.test.mjs
  */
 import { test } from "node:test";
@@ -11,11 +11,13 @@ import { dirname, join } from "node:path";
 import { createVoyage, ENUMS, SCHEMA_VERSION } from "../js/dataModel.js";
 import { inclusiveDays, updateCandidateDays, updateExaminerBasis, recalculateVoyages } from "../js/calculationEngine.js";
 import { migrateRecordToV050 } from "../js/migrationEngine.js";
-import { applyExaminerReview } from "../js/examinerReview.js";
+import { applyExaminerReview, EXAMINER_INPUT_FIELDS } from "../js/examinerReview.js";
 import { validateExaminerReview, validateVoyage } from "../js/validationEngine.js";
 import { buildSummary } from "../js/summaryEngine.js";
 import { TEXT } from "../js/examinerI18n.js";
 import { candidatePrintHtml, examinerPrintHtml } from "../js/printView.js";
+import { lineSpecialServiceDays } from "../js/summaryEngine.js";
+import { CAPACITIES, labelFor } from "../js/referenceData.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => JSON.parse(readFileSync(join(here, "fixtures", name), "utf8"));
@@ -62,109 +64,128 @@ test("converted days: null when not calculable (never zero), calculated otherwis
   assert.equal(buildSummary(r.voyages).automatedCalculation.totalConvertedDays, 129);
 });
 
-test("examiner basis options are exactly the four required", () => {
-  assert.deepEqual(ENUMS.examinerBasisSelectable, ["DAYS_ON_BOARD", "DAYS_AT_SEA", "CONVERTED_DAYS", "MANUAL_DETERMINATION"]);
+test("v0.8.0 item 4: examiner basis removed — reference is always the converted days", () => {
+  const v = voyage("2025-01-01", "2025-01-11", 8); // A = 10, B = 8 → 8-h: min(12, 10) = 10
+  v.examinerReview.examinerBasis = "DAYS_AT_SEA"; // value from an older record: ignored
+  applyExaminerReview(v, { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: 8 });
+  assert.equal(v.examinerReview.referenceDays, 10);
+  assert.equal(v.examinerReview.referenceSource, "CONVERTED_DAYS");
+  assert.equal(v.examinerReview.basisDays, null);
+  assert.equal(v.examinerReview.adjustmentRequired, true);
+  assert.ok(!("examinerBasis" in Object.fromEntries(EXAMINER_INPUT_FIELDS.map((f) => [f, 1]))));
 });
 
-test("adjustment reason needed when final differs from the basis — a warning, never a block (v0.7.0)", () => {
-  const v = voyage("2025-01-01", "2025-01-11", 8); // A = 10, B = 8
-  let res = applyExaminerReview(v, { reviewStatus: "ACCEPTED", examinerBasis: "DAYS_ON_BOARD", finalAcceptedDays: 10 });
-  assert.equal(res.valid, true, res.errors.join());
-  assert.equal(v.examinerReview.adjustmentRequired, false);
+test("v0.8.0 item 3: Accepted counts converted days; final days only with adjustment / information required", () => {
+  const v = voyage("2025-01-01", "2025-01-11"); // converted = 10
+  let res = applyExaminerReview(v, { reviewStatus: "ACCEPTED", finalAcceptedDays: 7 });
+  assert.equal(v.examinerReview.finalAcceptedDays, null, "final days cleared for Accepted");
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 10);
+  assert.equal(res.valid, true);
 
-  res = applyExaminerReview(v, { examinerBasis: "DAYS_ON_BOARD", finalAcceptedDays: 9, adjustmentReason: "" });
-  assert.equal(res.valid, true, "missing reason does not block");
-  assert.ok(res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"));
-  assert.ok(res.warnings.includes("CONSIDER_ACCEPTED_WITH_ADJUSTMENT"));
+  res = applyExaminerReview(v, { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: null, adjustmentReason: "" });
+  assert.ok(res.warnings.includes("FINAL_ACCEPTED_DAYS_REQUIRED"));
+  assert.ok(res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"), "adjustment always needs a reason");
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 0);
+
+  res = applyExaminerReview(v, { finalAcceptedDays: 12 });
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 12, "final days override converted days");
+  assert.ok(res.warnings.includes("FINAL_EXCEEDS_BASIS"));
+  res = applyExaminerReview(v, { adjustmentReason: "Two extra days per testimonial." });
+  assert.ok(!res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"));
+  assert.equal(res.valid, true);
+
+  res = applyExaminerReview(v, { reviewStatus: "ADDITIONAL_INFORMATION_REQUIRED", finalAcceptedDays: null, adjustmentReason: "" });
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 0, "information required without final days counts 0");
+  assert.ok(!res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"));
+  res = applyExaminerReview(v, { finalAcceptedDays: 9 });
   assert.equal(v.examinerReview.effectiveAcceptedDays, 9);
+  assert.ok(res.warnings.includes("FINAL_DAYS_PENDING_INFORMATION"));
+  assert.ok(res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"), "9 differs from 10");
+  res = applyExaminerReview(v, { finalAcceptedDays: 10 });
+  assert.ok(!res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"), "equal to converted days: no reason");
 
-  res = applyExaminerReview(v, { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", adjustmentReason: "One day in port awaiting crew change." });
-  assert.ok(!res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"));
+  applyExaminerReview(v, { reviewStatus: "REJECTED", finalAcceptedDays: 5 });
+  assert.equal(v.examinerReview.finalAcceptedDays, null);
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 0);
 
-  res = applyExaminerReview(v, { examinerBasis: "DAYS_AT_SEA", finalAcceptedDays: 8, adjustmentReason: "", reviewStatus: "ACCEPTED" });
-  assert.equal(res.valid, true, res.errors.join());
-  assert.equal(v.examinerReview.basisDays, 8);
-  assert.ok(!res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"));
+  applyExaminerReview(v, { reviewStatus: "NOT_REVIEWED", finalAcceptedDays: 5 });
+  assert.equal(v.examinerReview.reviewStatus, "NOT_REVIEWED", "no automatic status any more");
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 0);
 });
 
-test("converted-days basis uses the calculated value", () => {
-  const v = voyage("2025-01-01", "2025-01-11", 8); // 8-h: min(1.5 × 8 = 12, 10) = 10
-  const res = applyExaminerReview(v, { reviewStatus: "ACCEPTED", examinerBasis: "CONVERTED_DAYS", finalAcceptedDays: 10 });
-  assert.equal(v.examinerReview.basisDays, 10);
-  assert.equal(res.valid, true, res.errors.join());
-});
-
-test("manual-review line: no reference value, final days still counted, reason asked for", () => {
+test("v0.8.0: Accepted on a manual-review line counts 0 with a warning", () => {
   const v = voyage("2025-01-01", "2025-01-11");
   v.vessel.vesselTypeCode = "MOU";
   recalculateVoyages([v]);
-  const res = applyExaminerReview(v, { reviewStatus: "ACCEPTED", examinerBasis: "CONVERTED_DAYS", finalAcceptedDays: 7 });
-  assert.equal(res.valid, true);
-  assert.ok(res.warnings.includes("CONVERTED_DAYS_NOT_CALCULATED"));
-  assert.ok(res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"));
-  assert.equal(v.examinerReview.basisDays, null);
-  assert.equal(v.examinerReview.effectiveAcceptedDays, 7);
-});
-
-test("manual determination always asks for a reason", () => {
-  const v = voyage("2025-01-01", "2025-01-11");
-  const res = applyExaminerReview(v, { reviewStatus: "ACCEPTED", examinerBasis: "MANUAL_DETERMINATION", finalAcceptedDays: 10, adjustmentReason: "" });
-  assert.ok(res.warnings.includes("ADJUSTMENT_REASON_REQUIRED"));
-  assert.equal(res.valid, true);
-});
-
-test("v0.7.0: basis optional — accepted without basis or final days counts the converted days; rejected counts 0", () => {
-  const v = voyage("2025-01-01", "2025-01-11"); // converted = 10
   let res = applyExaminerReview(v, { reviewStatus: "ACCEPTED" });
+  assert.ok(res.warnings.includes("ACCEPTED_WITHOUT_CONVERTED_DAYS"));
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 0);
+  res = applyExaminerReview(v, { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: 7, adjustmentReason: "MOU Table III" });
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 7);
   assert.equal(res.valid, true);
-  assert.ok(!res.errors.includes("EXAMINER_BASIS_REQUIRED"));
-  assert.ok(res.warnings.includes("FINAL_DAYS_DEFAULTED_TO_REFERENCE"));
-  assert.equal(v.examinerReview.referenceSource, "CONVERTED_DAYS");
-  assert.equal(v.examinerReview.effectiveAcceptedDays, 10);
-  res = applyExaminerReview(v, { reviewStatus: "REJECTED", finalAcceptedDays: 5, adjustmentReason: "x" });
-  assert.ok(res.warnings.includes("REJECTED_LINE_COUNTS_ZERO"));
-  assert.equal(v.examinerReview.effectiveAcceptedDays, 0);
 });
 
-test("v0.7.0: no basis — final days compared with converted days", () => {
-  const v = voyage("2025-01-01", "2025-01-11"); // converted = 10
-  applyExaminerReview(v, { reviewStatus: "ACCEPTED", finalAcceptedDays: 10 });
-  assert.equal(v.examinerReview.adjustmentRequired, false);
-  applyExaminerReview(v, { finalAcceptedDays: 12 });
-  assert.equal(v.examinerReview.adjustmentRequired, true);
-  assert.equal(v.examinerReview.effectiveAcceptedDays, 12, "final days override converted days");
-});
-
-test("v0.7.0 4(d): final days on a Not reviewed line set the status automatically", () => {
-  const v = voyage("2025-01-01", "2025-01-11"); // converted = 10
-  let res = applyExaminerReview(v, { reviewStatus: "NOT_REVIEWED", finalAcceptedDays: 10 });
-  assert.equal(v.examinerReview.reviewStatus, "ACCEPTED");
-  assert.equal(res.statusChanged, true);
-  assert.ok(res.warnings.includes("STATUS_SET_AUTOMATICALLY"));
-  // still automatic: follows the final days
-  applyExaminerReview(v, { reviewStatus: "ACCEPTED", finalAcceptedDays: 8 });
-  assert.equal(v.examinerReview.reviewStatus, "ACCEPTED_WITH_ADJUSTMENT");
-  // cleared → back to Not reviewed
-  applyExaminerReview(v, { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: null });
-  assert.equal(v.examinerReview.reviewStatus, "NOT_REVIEWED");
-  assert.equal(v.examinerReview.effectiveAcceptedDays, 0);
-  // manual choice ends the automatic mode
-  applyExaminerReview(v, { reviewStatus: "NOT_REVIEWED", finalAcceptedDays: 8 });
-  applyExaminerReview(v, { reviewStatus: "ADDITIONAL_INFORMATION_REQUIRED", finalAcceptedDays: 8 });
-  assert.equal(v.examinerReview.statusSetAutomatically, false);
-  res = applyExaminerReview(v, { reviewStatus: "ADDITIONAL_INFORMATION_REQUIRED", finalAcceptedDays: 9 });
-  assert.equal(v.examinerReview.reviewStatus, "ADDITIONAL_INFORMATION_REQUIRED");
-  assert.ok(res.warnings.includes("FINAL_DAYS_PENDING_INFORMATION"));
-  assert.equal(v.examinerReview.effectiveAcceptedDays, 9);
-});
-
-test("v0.7.0: invalid final days are errors and count 0", () => {
+test("v0.8.0: invalid final days are errors and count 0", () => {
   const v = voyage("2025-01-01", "2025-01-11");
-  let res = applyExaminerReview(v, { reviewStatus: "ACCEPTED", finalAcceptedDays: -2 });
+  let res = applyExaminerReview(v, { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: -2 });
   assert.ok(res.errors.includes("NEGATIVE_FINAL_ACCEPTED_DAYS"));
   assert.equal(v.examinerReview.effectiveAcceptedDays, 0);
   res = applyExaminerReview(v, { finalAcceptedDays: 2.5 });
   assert.ok(res.errors.includes("FINAL_ACCEPTED_DAYS_NOT_WHOLE"));
+});
+
+test("v0.8.0: reviews saved by v0.6/v0.7 keep the examiner's figure", () => {
+  const mk = (status, final, basis = "NONE") => ({
+    schemaVersion: "0.5.0", voyages: [{
+      service: { capacityCode: "MATE", watchHours: 8 }, dates: { embarkationDate: "2025-01-01", disembarkationDate: "2025-01-11" },
+      examinerReview: { reviewStatus: status, examinerBasis: basis, finalAcceptedDays: final }
+    }]
+  });
+  const one = (rec) => migrateRecordToV050(rec).voyages[0];
+  let v = one(mk("ACCEPTED", 10));               // equal to converted
+  assert.equal(v.examinerReview.reviewStatus, "ACCEPTED");
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 10);
+  v = one(mk("ACCEPTED", 8, "DAYS_AT_SEA"));     // differed from converted
+  assert.equal(v.examinerReview.reviewStatus, "ACCEPTED_WITH_ADJUSTMENT");
+  assert.equal(v.examinerReview.finalAcceptedDays, 8);
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 8);
+  assert.ok(v.metadata.legacyWarnings.includes("REVIEW_STATUS_CONVERTED_V080"));
+  v = one(mk("NOT_REVIEWED", 6));
+  assert.equal(v.examinerReview.reviewStatus, "ACCEPTED_WITH_ADJUSTMENT");
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 6);
+  v = one(mk("REJECTED", 4));
+  assert.equal(v.examinerReview.finalAcceptedDays, null);
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 0);
+  v = one(mk("ADDITIONAL_INFORMATION_REQUIRED", 5));
+  assert.equal(v.examinerReview.finalAcceptedDays, 5);
+  assert.deepEqual(v.metadata.legacyWarnings, []);
+});
+
+test("v0.8.0 item 6: approved days per special service, overlapping dates counted once", () => {
+  const mk = (embark, disembark, spec) => {
+    const v = createVoyage(1);
+    v.service.capacityCode = "MATE"; v.service.watchHours = 8;
+    v.dates.embarkationDate = embark; v.dates.disembarkationDate = disembark;
+    Object.assign(v.specializedService, spec);
+    return v;
+  };
+  const a = mk("2025-01-01", "2025-01-31", { transferOperation: "OIL_TRANSFER", passengerService: true }); // 30 days
+  const b = mk("2025-01-21", "2025-02-10", { transferOperation: "OIL_TRANSFER" });                         // 20 days, 10 overlap
+  const c = mk("2025-03-01", "2025-03-31", { iceConditions: { POLAR: { selected: true, days: 40 }, ACCEPTABLE_ICE: { selected: true, days: 12 } } });
+  const d = mk("2025-04-01", "2025-04-11", { transferOperation: "GAS_TRANSFER" });
+  recalculateVoyages([a, b, c, d]);
+  for (const v of [a, b, c]) applyExaminerReview(v, { reviewStatus: "ACCEPTED" });
+  applyExaminerReview(d, { reviewStatus: "REJECTED" });
+  const s = buildSummary([a, b, c, d]);
+  assert.equal(s.examinerDetermination.totalFinalAcceptedDays, 80);
+  assert.deepEqual(s.examinerDetermination.specialServiceApprovedDays, {
+    POLAR: 30,            // 40 entered, limited to the line's 30 approved days
+    ACCEPTABLE_ICE: 12,
+    PASSENGER: 30,
+    OIL_TRANSFER: 40,     // 30 + 20 − 10 overlapping days
+    GAS_TRANSFER: 0       // selected, but the line was rejected
+  });
+  assert.equal(lineSpecialServiceDays(a, "FISHING"), null);
 });
 
 test("v0.7.0 column K: several ice conditions, each with days; legacy code kept in step", () => {
@@ -249,8 +270,9 @@ test("0.5.0 records are normalised and recalculated, not replaced", () => {
   assert.equal(v.dates.daysOnBoard, 9);
   assert.equal(v.dates.daysAtSeaEffective, 8);
   assert.equal(v.examinerReview.examinerComments, "");
-  assert.equal(v.examinerReview.basisDays, 8);
   assert.equal(v.calculation.convertedDays, 9);
+  assert.equal(v.examinerReview.reviewStatus, "ACCEPTED_WITH_ADJUSTMENT", "v0.7 Accepted with final ≠ converted kept as an adjustment");
+  assert.equal(v.examinerReview.effectiveAcceptedDays, 8);
   assert.ok(Array.isArray(r.auditTrail));
 });
 
@@ -287,27 +309,39 @@ test("every English label has a French translation; renamed name field", () => {
 
 test("updateExaminerBasis compares numbers, not strings", () => {
   const v = voyage("2025-01-01", "2025-01-11");
-  v.examinerReview.examinerBasis = "DAYS_ON_BOARD";
+  v.examinerReview.reviewStatus = "ADDITIONAL_INFORMATION_REQUIRED";
   v.examinerReview.finalAcceptedDays = "10";
   updateExaminerBasis(v);
+  assert.equal(v.examinerReview.finalAcceptedDays, 10);
   assert.equal(v.examinerReview.adjustmentRequired, false);
   assert.equal(validateExaminerReview(v).warnings.includes("ADJUSTMENT_REASON_REQUIRED"), false);
 });
 
-test("v0.7.0: PDF/print copies carry the unvetted label (candidate) and the examiner figures", () => {
+test("PDF/print copies: unvetted label (candidate); v0.8.0 examiner summary with certificate", () => {
   const r = migrateRecordToV050(fixture("legacy-v0.4.0.json"));
   r.voyages[1].specializedService.iceConditions.POLAR.days = 12;
   recalculateVoyages(r.voyages);
-  applyExaminerReview(r.voyages[0], { finalAcceptedDays: 25, adjustmentReason: "Leave" });
+  applyExaminerReview(r.voyages[0], { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: 25, adjustmentReason: "Leave" });
+  applyExaminerReview(r.voyages[1], { reviewStatus: "ACCEPTED" });
   const s = buildSummary(r.voyages);
   const c = candidatePrintHtml(r, s, "en", "Statement of Sea Service for a Certificate");
   assert.match(c, /Unvetted sea service — subject to examiner review/);
   assert.match(c, /Service en mer non vérifié/);
   assert.match(c, /Polar waters: 12 d/);
+  assert.match(c, /Mate in Charge of a Watch/);
   const f = candidatePrintHtml(r, s, "fr", "État");
-  assert.match(f, /Eaux polaires : 12 j|Eaux polaires: 12 j/);
+  assert.match(f, /Eaux polaires: 12 j/);
+  assert.match(f, /Officier de pont en charge du quart à la passerelle/);
   const e = examinerPrintHtml(r, s, "en");
-  assert.match(e, /Total final accepted days<\/th><td>25/);
-  assert.match(e, /Difference from total converted days<\/th><td>-104/);
-  assert.doesNotMatch(e, /Schema \/ record/);
+  assert.match(e, /<strong>Total final accepted days: 81 \(2\.7 months\)<\/strong>/);
+  assert.match(e, /Certificate applied for: <strong>Master 500 Gross Tonnage, Near Coastal<\/strong>/);
+  assert.match(e, /Difference from total converted days<\/th><td>-48/);
+  assert.match(e, /Polar waters<\/th><td>12/);
+  assert.doesNotMatch(e, /Examiner basis|Lines reviewed|Lines with/);
+});
+
+test("v0.8.0 item 1: capacity MATE is 'Mate in Charge of a Watch' / 'Officier de pont en charge du quart à la passerelle'", () => {
+  assert.equal(labelFor(CAPACITIES, "MATE", "en"), "Mate in Charge of a Watch");
+  assert.equal(labelFor(CAPACITIES, "MATE", "fr"), "Officier de pont en charge du quart à la passerelle");
+  assert.equal(labelFor(CAPACITIES, "SUPERNUMERARY_MATE", "en"), "Supernumerary Mate");
 });

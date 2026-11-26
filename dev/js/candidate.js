@@ -1,5 +1,5 @@
 /**
- * Candidate form controller — v0.7.0.
+ * Candidate form controller — v0.8.0 (v0.8.0: Applicant Declaration mandatory before Export JSON / PDF).
  * Shared by the PRODUCTION candidate page (index.html, through js/app.js) and the
  * development candidate page (dev/index.html). <body data-variant="production|development">
  * selects the page title; everything else is identical, so both pages always apply the
@@ -21,7 +21,7 @@ import { recalculateVoyages, toNumberOrNull } from "./calculationEngine.js";
 import { validateVoyage } from "./validationEngine.js";
 import { buildSummary } from "./summaryEngine.js";
 import * as storage from "./storageEngine.js";
-import { candidatePrintHtml, printRecord, fileStem } from "./printView.js";
+import { candidatePrintHtml, declarationMissingPrintHtml, printRecord, fileStem } from "./printView.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -205,6 +205,7 @@ function render() {
   $("cdn").value = c.cdnNumber || "";
   $("applicationDate").value = record.application.applicationDate || "";
   $("applicantDeclaration").checked = Boolean(c.declarationAccepted);
+  updateDeclarationState();
 
   const tbody = $("recordsBody");
   tbody.innerHTML = "";
@@ -253,7 +254,32 @@ function save() {
   setStatus("recordSaved");
 }
 
+/**
+ * v0.8.0 — the Applicant Declaration is mandatory before Export JSON and Export PDF / Print.
+ * Returns true when ticked; otherwise shows the caution, highlights the declaration and returns false.
+ */
+function declarationTicked() {
+  const ok = $("applicantDeclaration").checked;
+  updateDeclarationState();
+  if (!ok) {
+    const section = $("declarationSection");
+    section.classList.add("declarationMissing");
+    setStatus("declarationRequired", "status-warning");
+    section.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    $("applicantDeclaration").focus();
+  }
+  return ok;
+}
+
+function updateDeclarationState() {
+  const ok = $("applicantDeclaration").checked;
+  const section = $("declarationSection");
+  section.classList.toggle("declarationOk", ok);
+  if (ok) section.classList.remove("declarationMissing");
+}
+
 function exportJson() {
+  if (!declarationTicked()) return;
   collectHeader();
   refresh();
   const blob = new Blob([storage.exportRecord(record)], { type: "application/json" });
@@ -270,10 +296,13 @@ function fillPrintView() {
   if (!record) return;
   collectHeader();
   refresh();
-  $("printView").innerHTML = candidatePrintHtml(record, record.calculationSummary, language, t(language, titleKey()));
+  $("printView").innerHTML = $("applicantDeclaration").checked
+    ? candidatePrintHtml(record, record.calculationSummary, language, t(language, titleKey()))
+    : declarationMissingPrintHtml(language);
 }
 
 function exportPdf() {
+  if (!declarationTicked()) return;
   fillPrintView();
   setStatus("pdfHint", "status-success");
   printRecord($("printView").innerHTML, fileStem(record));
@@ -313,6 +342,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   ["surname", "givenNames", "cdn", "applicationDate", "certificate", "certificateHeld", "applicantDeclaration"]
     .forEach((id) => $(id).addEventListener("change", collectHeader));
+  $("applicantDeclaration").addEventListener("change", () => {
+    updateDeclarationState();
+    if ($("applicantDeclaration").checked && lastStatus?.key === "declarationRequired") setStatus(null, "");
+  });
   $("btnAdd").addEventListener("click", () => {
     collectHeader();
     record.voyages.push(createVoyage(record.voyages.length + 1));

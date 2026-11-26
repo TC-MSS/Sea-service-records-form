@@ -5,7 +5,7 @@
  */
 export const CAPACITIES = [
     ["MASTER", "Master", "Capitaine"], ["CHIEF_MATE", "Chief Mate", "Premier officier de pont"],
-    ["MATE", "Mate", "Officier de pont"], ["SUPERNUMERARY_MATE", "Supernumerary Mate", "Officier de pont surnuméraire"],
+    ["MATE", "Mate in Charge of a Watch", "Officier de pont en charge du quart à la passerelle"], ["SUPERNUMERARY_MATE", "Supernumerary Mate", "Officier de pont surnuméraire"],
     ["ABLE_SEAFARER_DECK", "Able Seafarer Deck", "Matelot qualifié Pont"], ["BRIDGE_WATCH_RATING", "Bridge Watch Rating", "Matelot de quart à la passerelle"],
     ["DECK_CADET", "Deck Cadet", "Élève-officier de pont"],
     ["CHIEF_ENGINEER", "Chief Engineer", "Chef mécanicien"], ["SECOND_ENGINEER", "Second Engineer", "Second mécanicien"],

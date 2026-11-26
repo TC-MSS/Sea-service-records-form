@@ -107,3 +107,19 @@ tr.reviewRow > td{ padding:0 0 14px 0; border-left:4px solid #003366; background
     .printView .pvMeta, .printView .pvNote{ font-size:9px; color:#333; }
     .printView .pvExplain{ margin:0; padding-left:16px; }
 }
+
+/* v0.8.0 — examiner determination: total in bold with the certificate; special service totals */
+.finalTotal{ margin:4px 0 8px; padding:8px 10px; background:#fff; border:2px solid #003366; border-radius:4px; font-size:16px; }
+.finalTotal strong{ font-weight:800; }
+.finalTotal div{ margin:2px 0; }
+.specialServices h4{ margin:10px 0 4px; font-size:13px; }
+.specialServices ul{ margin:0; padding-left:18px; }
+.reviewGrid input:disabled{ background:#f0f0f0; color:#555; cursor:not-allowed; }
+
+/* v0.8.0 — candidate declaration is mandatory before export */
+.declarationCaution{ margin:6px 0 0; padding:6px 10px; background:#fff4e5; border-left:4px solid #b45f06; color:#5c3200; font-weight:600; }
+.declarationOk .declarationCaution{ display:none; }
+.declarationMissing{ border:2px solid #b00020 !important; background:#fff5f5 !important; }
+.declarationMissing .declarationCaution{ background:#fde8ea; border-left-color:#b00020; color:#b00020; }
+.printView .pvCaution{ border:2px solid #b00020; padding:10px; font-size:14px; font-weight:700; }
+@media print{ .printView .pvTotal{ font-size:13px; border:2px solid #000; padding:6px; } }

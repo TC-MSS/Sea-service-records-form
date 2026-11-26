@@ -1,5 +1,5 @@
 /**
- * Validation engine — v0.7.0.
+ * Validation engine — v0.8.0.
  * Returns codes; the UI translates them (see examinerI18n.js).
  * Certificate eligibility is intentionally out of scope for this build.
  * Conversion (TP 2293) warnings are surfaced as line warnings.
@@ -54,18 +54,14 @@ export function validateExaminerReview(voyage) {
   const final = r.finalAcceptedDays;
 
   // Errors: values that cannot be counted.
-  if (!ENUMS.examinerBasis.includes(r.examinerBasis)) errors.push("INVALID_EXAMINER_BASIS");
   if (final !== null && (!Number.isFinite(Number(final)) || Number(final) < 0)) errors.push("NEGATIVE_FINAL_ACCEPTED_DAYS");
   else if (final !== null && !Number.isInteger(Number(final))) errors.push("FINAL_ACCEPTED_DAYS_NOT_WHOLE");
 
   // Warnings: shown clearly, never block saving.
-  if (r.statusSetAutomatically) warnings.push("STATUS_SET_AUTOMATICALLY");
   if (reasonMissing(voyage)) warnings.push("ADJUSTMENT_REASON_REQUIRED");
-  if (accepted && final === null) warnings.push(r.referenceDays !== null ? "FINAL_DAYS_DEFAULTED_TO_REFERENCE" : "FINAL_ACCEPTED_DAYS_REQUIRED");
-  if (r.examinerBasis === "CONVERTED_DAYS" && r.basisDays === null) warnings.push("CONVERTED_DAYS_NOT_CALCULATED");
-  if (r.reviewStatus === "REJECTED" && final !== null && Number(final) !== 0) warnings.push("REJECTED_LINE_COUNTS_ZERO");
+  if (r.reviewStatus === "ACCEPTED_WITH_ADJUSTMENT" && final === null) warnings.push("FINAL_ACCEPTED_DAYS_REQUIRED");
+  if (r.reviewStatus === "ACCEPTED" && r.referenceDays === null) warnings.push("ACCEPTED_WITHOUT_CONVERTED_DAYS");
   if (r.reviewStatus === "ADDITIONAL_INFORMATION_REQUIRED" && final !== null) warnings.push("FINAL_DAYS_PENDING_INFORMATION");
-  if (r.reviewStatus === "ACCEPTED" && r.adjustmentRequired) warnings.push("CONSIDER_ACCEPTED_WITH_ADJUSTMENT");
   if (final !== null && r.referenceDays !== null && Number(final) > r.referenceDays) warnings.push("FINAL_EXCEEDS_BASIS");
   if (accepted && !r.capacityVerified) warnings.push("CAPACITY_NOT_VERIFIED");
   if (accepted && voyageHasSpecializedService(voyage) && !r.specializedServiceVerified) warnings.push("SPECIALIZED_SERVICE_NOT_VERIFIED");
@@ -75,7 +71,7 @@ export function validateExaminerReview(voyage) {
 /** True when an adjustment reason is needed (whether or not one has been entered). */
 export function reasonNeeded(voyage) {
   const r = voyage.examinerReview;
-  return r.reviewStatus !== "REJECTED" && (r.adjustmentRequired || r.reviewStatus === "ACCEPTED_WITH_ADJUSTMENT");
+  return r.reviewStatus === "ACCEPTED_WITH_ADJUSTMENT" || (r.reviewStatus === "ADDITIONAL_INFORMATION_REQUIRED" && r.adjustmentRequired);
 }
 /** True only while a needed reason is still empty. */
 export function reasonMissing(voyage) {

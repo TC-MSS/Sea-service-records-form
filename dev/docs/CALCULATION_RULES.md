@@ -1,6 +1,6 @@
-# Sea Service Calculation Rules — v0.7.0
+# Sea Service Calculation Rules — v0.8.0
 
-Rules version stored with every calculated line (`calculation.calculationRuleVersion`): `TP2293-CH3_MPR-115-117_v1.0` — unchanged in v0.7.0 (`dev/js/tp2293Engine.js` was not modified).
+Rules version stored with every calculated line (`calculation.calculationRuleVersion`): `TP2293-CH3_MPR-115-117_v1.0` — unchanged in v0.7.0 and v0.8.0 (`dev/js/tp2293Engine.js` was not modified).
 
 **v0.7.0:** the production candidate form (`index.html`) now uses this same engine, through `dev/js/candidate.js`. The candidate, development and examiner pages therefore always show the same column R and column T figures. On the candidate pages the results are labelled *Unvetted sea service — subject to examiner review / Service en mer non vérifié — sous réserve de l’examen par l’examinateur*.
 
@@ -22,6 +22,8 @@ Sources: TP 2293 Chapter 3 (pages 28–38 of TP 2293F, in the project) and the M
 | R8 | No double counting | TP 2293 s. 3.3(2),(3) | Overlapping dates between lines are flagged with the number of days. A same-day change-over (discharge and engagement on the same date) is not an overlap. |
 
 A = days on board (R1); B = days at sea / under way entered in column S.
+
+**Capacity labels (v0.8.0):** code `MATE` is shown as **"Mate in Charge of a Watch" / "Officier de pont en charge du quart à la passerelle"** (was "Mate" / "Officier de pont"). The code is unchanged, so saved records and the rules are unaffected. R6 still applies only to `SUPERNUMERARY_MATE`.
 
 **Rounding:** credited days are rounded **down** to whole days. No partial day is credited. The unrounded value is kept in `calculation.convertedDaysExact`.
 
@@ -59,25 +61,42 @@ A = days on board (R1); B = days at sea / under way entered in column S.
 | Junior officer | A = 30, 8-h | 30 × 2/3 = **20** |
 | Junior officer cap | 243 + 40 junior + 30 mate | 270 + 30 = **300** |
 
-## 5. Examiner determination (v0.7.0)
+## 5. Examiner determination (v0.8.0)
 
-The TP 2293 figure is a reference. The examiner's **Final accepted days** override days on board, days at sea and converted days.
+The TP 2293 converted days (column T) are the reference. The **examiner basis was removed** in v0.8.0; older records keep `examinerBasis` in the JSON but it is not used.
 
-| Situation | Figure counted in "Total final accepted days" |
-|---|---|
-| Rejected | 0 (whatever is typed in Final accepted days — a warning says so) |
-| Final accepted days entered (any other status) | the final accepted days |
-| Accepted / Accepted with adjustment, no final days | the reference value (warning shown); 0 if there is none |
-| Not reviewed / Additional information required, no final days | 0 |
-| Final days negative or not a whole number | 0, and an error on the line |
+| Review status | Final accepted days box | Figure counted in "Total final accepted days" |
+|---|---|---|
+| *(no status yet — "Select a status")* | disabled | 0 |
+| Accepted | disabled (shows the converted days as a hint) | the converted days; 0 with a warning if the line could not be calculated |
+| Accepted with adjustment | **enabled** | the final accepted days (0 until entered, with a warning) |
+| Additional information required | **enabled** | the final accepted days if entered, otherwise 0 |
+| Rejected | disabled | 0 |
 
-**Reference value** = the days of the selected basis (Days on board, Days at sea, Converted days). The basis is optional; with no basis the reference is the calculated converted days. "Manual determination" has no reference value.
+"Not reviewed" is no longer a choice in the list; it is only the starting state ("Select a status"). The automatic status of v0.7.0 was removed. Changing to a status whose box is disabled clears the final days. Final days that are negative or not a whole number are an error and count 0.
 
-**Adjustment reason** is needed when the final days differ from the reference value, when there is no reference value (manual-review line, manual determination), or when the status is "Accepted with adjustment". A missing reason is a **warning** (red field and red message, counted in "Lines missing an adjustment reason"). It never blocks saving.
+**Adjustment reason:** always needed for "Accepted with adjustment"; needed for "Additional information required" when the final days differ from the converted days. A missing reason is a **warning** (red field, red message) and never blocks saving.
 
-**Automatic status (decision 4(d), confirmed 2026-11-25):** typing final days on a "Not reviewed" line sets the status to "Accepted" (final = reference) or "Accepted with adjustment" (final ≠ reference) and shows a notice. While the status is automatic it follows later changes to the final days; clearing the final days returns the line to "Not reviewed". Choosing a status by hand ends the automatic mode. A line cannot stay "Not reviewed" while it has final days.
+**Reviews saved by v0.6.0/v0.7.0** are converted when loaded, keeping the examiner's figure: Accepted or Not reviewed with final days equal to the converted days → Accepted; with other final days → Accepted with adjustment (final days kept); Rejected → final days cleared. The line shows `REVIEW_STATUS_CONVERTED_V080`.
 
-The summary shows the total final accepted days, months (÷ 30, rounded down to 2 decimals) and the **difference from the total converted days** (final − converted; negative in red, positive in green).
+**Summary — Examiner determination (v0.8.0):**
+
+1. **Total final accepted days** and months (÷ 30), in bold, followed by the **certificate applied for** in bold.
+2. Difference from the total converted days (final − converted; negative in red, positive in green).
+3. Additional information required (number of lines).
+4. **Approved special service** — see §5a.
+
+Removed: every "Lines …" count (reviewed, not reviewed, with final days, missing a reason, with errors) and the Accepted, Accepted with adjustment and Rejected counts. The values are still computed in the saved JSON.
+
+### 5a. Approved days per special service (v0.8.0)
+
+Shown for each special service that is selected on at least one line: Polar waters, Acceptable ice service, Passenger service, Oil / Chemical / Gas transfer, Fishing service, Dynamic positioning, Offshore service (DP and offshore counts under both).
+
+- **Line figure:** the line's counted days (above). For the ice conditions: the days the candidate entered for that condition, limited to the line's counted days (0 if no days were entered).
+- **No duplication:** within one service, each line's figure is spread evenly over its service days (engagement day to the day before discharge, as in TP 2293 s. 3.3(4)). Where lines with the same service overlap, each calendar day counts once, at the higher daily value. Lines without dates are added as they are. The result is rounded down.
+- A line can count under several services (e.g. polar waters and oil transfer). The service totals therefore do not add up to the overall total.
+
+Example (unit test): oil transfer on 1–31 Jan (30 days) and 21 Jan–10 Feb (20 days), both accepted → 30 + 20 − 10 overlapping days = **40**.
 
 ## 6. Column K — ice service (v0.7.0)
 
@@ -87,12 +106,12 @@ Stored as `specializedService.iceConditions = { POLAR: {selected, days}, ACCEPTA
 
 Checks: condition selected without days → warning `ICE_DAYS_NOT_STATED`; days above days on board → error `ICE_DAYS_EXCEED_ONBOARD`; negative or fractional days → error `ICE_DAYS_INVALID`. The ice days are not converted and do not change column T; they are totalled in the summary ("Polar waters (days entered)", "Acceptable ice service (days entered)") for the examiner. The two conditions may overlap, so no combined limit is applied.
 
-## 7. Decisions still to confirm (unchanged since v0.6.0 — not implemented in v0.7.0)
+## 7. Decisions still to confirm (unchanged since v0.6.0 — not implemented in v0.8.0)
 
 These points are interpretations made for this build. Please confirm them with the examination unit:
 
 1. **Day count (R1).** TP 2293 Table 1 subtracts the dates. Since v0.7.0 this count is also used on the production form, replacing its inclusive count (1–31 Jan was 31, now 30). Candidates whose engagement and discharge times justify an extra day need an examiner adjustment (s. 3.3(4) exception).
 2. **Rounding down** to whole days, rather than rounding to nearest (the old production calculator used rounding to nearest).
-3. **Choice of method.** The days-under-way method (s. 3.7) is applied whenever column S differs from R. If the vessel carried passengers or cargo, the examiner should choose basis "Days on board" instead.
+3. **Choice of method.** The days-under-way method (s. 3.7) is applied whenever column S differs from R. If the vessel carried passengers or cargo, the examiner should use "Accepted with adjustment" and enter the final accepted days (the examiner basis was removed in v0.8.0).
 4. **Junior officer.** MPR s. 117 is applied to the capacity "Supernumerary Mate" for every certificate type. The section refers to Master or Mate certificates.
 5. **Not yet implemented:** pilot service (s. 3.16, 2/3 up to 3 months), Canadian Forces rates (Table II), MOU Tables III–VI, approved training program remission (s. 3.22), fitting-out / lay-up / refit limits in the certificate tables, and certificate eligibility (minimum tonnage, voyage class, kW, months per certificate).

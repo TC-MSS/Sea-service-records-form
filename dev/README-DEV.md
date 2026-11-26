@@ -1,4 +1,19 @@
-# Sea Service Records Form — v0.7.0
+# Sea Service Records Form — v0.8.0
+
+## What changed in v0.8.0
+
+1. Capacity `MATE` shown as **"Mate in Charge of a Watch" / "Officier de pont en charge du quart à la passerelle"** (code unchanged).
+2. **Applicant Declaration mandatory** before Export JSON and Export PDF / Print, with a caution message (Save still allowed).
+3. Examiner: **Final accepted days** enabled only for "Accepted with adjustment" and "Additional information required". "Accepted" counts the converted days. "Not reviewed" removed from the choices (starting state "Select a status"); automatic status removed.
+4. Examiner **basis removed**; the reference is always the converted days.
+5. Summary: **total final accepted days in bold, followed by the certificate applied for**.
+6. Summary reduced (no "Lines …", Accepted, Accepted with adjustment or Rejected counts) and **approved days per special service**, overlapping dates counted once.
+
+Reviews saved by v0.6/v0.7 are converted on load without losing the examiner's figure. Tests: 38 unit, 35 smoke.
+
+---
+
+# v0.7.0 notes
 
 Automated sea service calculation under TP 2293 Chapter 3 and the Marine Personnel Regulations (ss. 115–117), shared by the **production** candidate page and the development pages.
 
@@ -47,9 +62,9 @@ Also, with no basis, the final days were never compared with anything (`adjustme
 ```
 node tools/check-syntax.mjs ..
 node tools/check-deps.mjs ..
-node --test tests/model.test.mjs tests/tp2293.test.mjs     # 40 unit tests
+node --test tests/model.test.mjs tests/tp2293.test.mjs     # 38 unit tests
 npm i -D playwright && npx playwright install chromium
-node tests/smoke.mjs                                       # 34 browser smoke tests (production page included)
+node tests/smoke.mjs                                       # 35 browser smoke tests (production page included)
 ```
 
 `npm test` runs all of them. Latest results: `docs/TEST_RESULTS.txt`. The smoke test writes `tests/smoke-*.png` screenshots; do not commit them.

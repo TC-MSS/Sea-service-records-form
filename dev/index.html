@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Statement of Sea Service for a Certificate (development v0.7.0)</title>
+<title>Statement of Sea Service for a Certificate (development v0.8.0)</title>
 <link rel="stylesheet" href="../css/app.css">
 <link rel="stylesheet" href="css/examiner.css">
 <link rel="stylesheet" href="css/candidate.css">
@@ -11,7 +11,7 @@
 <body data-variant="development">
 
 <header class="banner">
-  <h1 data-i18n="candidatePageTitle">Statement of Sea Service for a Certificate (development v0.7.0)</h1>
+  <h1 data-i18n="candidatePageTitle">Statement of Sea Service for a Certificate (development v0.8.0)</h1>
   <select id="langSelector" aria-label="Language / Langue">
     <option value="en">English</option>
     <option value="fr">Français</option>
@@ -99,9 +99,10 @@
   <ul id="findings" class="findings"></ul>
 </section>
 
-<section>
+<section id="declarationSection">
   <h2 data-i18n="applicantDeclarationTitle">Applicant Declaration</h2>
   <label class="declaration"><input type="checkbox" id="applicantDeclaration"> <span data-i18n="declaration">I certify that the information provided in this sea service record is accurate and complete.</span></label>
+  <p class="declarationCaution" role="note" data-i18n="declarationCaution">Mandatory: tick the Applicant Declaration before you can Export JSON or Export PDF / Print.</p>
 </section>
 
 <section class="noPrint">

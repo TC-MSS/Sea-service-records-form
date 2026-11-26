@@ -1,5 +1,5 @@
 /**
- * Calculation engine — v0.7.0 (shared by the production and development pages).
+ * Calculation engine — v0.8.0 (shared by the production and development pages).
  *
  * Candidate day counts, examiner-basis resolution and the entry point to the
  * TP 2293 / MPR conversion engine (tp2293Engine.js).
@@ -81,58 +81,90 @@ export function getBasisDays(voyage) {
 const calculatedDays = (voyage) =>
   voyage.calculation?.conversionStatus === "CALCULATED" ? toNumberOrNull(voyage.calculation.convertedDays) : null;
 
+/** v0.8.0 — statuses for which the examiner may enter Final accepted days. */
+export const FINAL_DAYS_STATUSES = Object.freeze(["ACCEPTED_WITH_ADJUSTMENT", "ADDITIONAL_INFORMATION_REQUIRED"]);
+export const finalDaysEnabled = (status) => FINAL_DAYS_STATUSES.includes(status);
+
 /**
- * v0.7.0 — reference value for the final accepted days.
- * The examiner basis is optional and informative: with no basis, the final days
- * are compared with the calculated converted days.
+ * v0.8.0 — the examiner basis was removed: the reference value is always the
+ * calculated converted days (column T). examinerBasis stays in older records but is not used.
  */
 export function getReference(voyage) {
-  const basis = voyage.examinerReview.examinerBasis;
-  if (basis === "MANUAL_DETERMINATION") return { days: null, source: "MANUAL_DETERMINATION" };
-  if (basis && basis !== "NONE") return { days: getBasisDays(voyage), source: basis };
   return { days: calculatedDays(voyage), source: "CONVERTED_DAYS" };
 }
 
 const isWholeNonNegative = (n) => n !== null && Number.isInteger(n) && n >= 0;
 
 /**
- * v0.7.0 — figure counted in the examiner totals for one line:
- *  - Rejected                         → 0
- *  - Final accepted days entered      → the final days (override everything)
- *  - Accepted / Accepted with adj., no final days → the reference value (or 0)
- *  - anything else                     → 0
+ * v0.8.0 — figure counted in the examiner totals for one line:
+ *  - Accepted                         → the converted days (0 when the line could not be calculated)
+ *  - Accepted with adjustment         → the final accepted days (0 until entered)
+ *  - Additional information required  → the final accepted days if entered, otherwise 0
+ *  - Rejected / not yet reviewed      → 0
  */
 export function effectiveAcceptedDays(voyage) {
   const r = voyage.examinerReview;
-  if (r.reviewStatus === "REJECTED") return { days: 0, source: "REJECTED" };
-  if (r.finalAcceptedDays !== null) {
-    return isWholeNonNegative(r.finalAcceptedDays) ? { days: r.finalAcceptedDays, source: "FINAL" } : { days: 0, source: "INVALID_FINAL" };
+  switch (r.reviewStatus) {
+    case "ACCEPTED":
+      return r.referenceDays !== null ? { days: r.referenceDays, source: "CONVERTED_DAYS" } : { days: 0, source: "NONE" };
+    case "ACCEPTED_WITH_ADJUSTMENT":
+    case "ADDITIONAL_INFORMATION_REQUIRED":
+      if (r.finalAcceptedDays === null) return { days: 0, source: "NONE" };
+      return isWholeNonNegative(r.finalAcceptedDays) ? { days: r.finalAcceptedDays, source: "FINAL" } : { days: 0, source: "INVALID_FINAL" };
+    case "REJECTED":
+      return { days: 0, source: "REJECTED" };
+    default:
+      return { days: 0, source: "NONE" };
   }
-  if (["ACCEPTED", "ACCEPTED_WITH_ADJUSTMENT"].includes(r.reviewStatus) && r.referenceDays !== null) return { days: r.referenceDays, source: "REFERENCE" };
-  return { days: 0, source: "NONE" };
 }
 
 /**
- * Refresh basisDays, referenceDays, adjustmentRequired and the counted figure.
- * An adjustment reason is required when final accepted days are entered and
- * differ from the reference value (selected basis, or converted days by default),
- * when there is no reference value to compare with, or when the basis is a manual determination.
+ * Refresh referenceDays, adjustmentRequired and the counted figure.
+ * Final accepted days are kept only for "Accepted with adjustment" and
+ * "Additional information required"; for any other status they are cleared.
+ * An adjustment reason is needed when the final days differ from the converted days
+ * (or there are no converted days); "Accepted with adjustment" always needs one.
  */
 export function updateExaminerBasis(voyage) {
   const r = voyage.examinerReview;
   r.finalAcceptedDays = toNumberOrNull(r.finalAcceptedDays);
+  if (!finalDaysEnabled(r.reviewStatus)) r.finalAcceptedDays = null;
   if (!r.examinerBasis) r.examinerBasis = "NONE";
-  r.basisDays = getBasisDays(voyage);
+  r.basisDays = null;
+  r.statusSetAutomatically = false;
   const ref = getReference(voyage);
   r.referenceDays = ref.days;
   r.referenceSource = ref.source;
   const final = r.finalAcceptedDays;
-  r.adjustmentRequired = final !== null && r.reviewStatus !== "REJECTED" && (
-    ref.source === "MANUAL_DETERMINATION" || ref.days === null || final !== ref.days
-  );
+  r.adjustmentRequired = final !== null && (ref.days === null || final !== ref.days);
   const eff = effectiveAcceptedDays(voyage);
   r.effectiveAcceptedDays = eff.days;
   r.acceptedDaysSource = eff.source;
+  return voyage;
+}
+
+/**
+ * v0.8.0 — bring examiner reviews saved by v0.6/v0.7 to the v0.8.0 rules without
+ * losing the examiner's figure (run when a record is loaded, not while typing):
+ *  - Accepted or Not reviewed with final days equal to the converted days → Accepted (final cleared);
+ *  - Accepted or Not reviewed with other final days → Accepted with adjustment (final kept);
+ *  - Rejected → final days cleared.
+ * A line warning REVIEW_STATUS_CONVERTED_V080 records the change.
+ */
+export function normaliseLegacyReview(voyage) {
+  const r = voyage.examinerReview;
+  const final = toNumberOrNull(r.finalAcceptedDays);
+  if (final === null || finalDaysEnabled(r.reviewStatus)) return voyage;
+  const converted = calculatedDays(voyage);
+  const before = r.reviewStatus;
+  if (r.reviewStatus === "ACCEPTED" || r.reviewStatus === "NOT_REVIEWED") {
+    r.reviewStatus = final === converted ? "ACCEPTED" : "ACCEPTED_WITH_ADJUSTMENT";
+  }
+  if (r.reviewStatus !== "ACCEPTED_WITH_ADJUSTMENT") r.finalAcceptedDays = null;
+  if (r.reviewStatus !== before || r.finalAcceptedDays === null) {
+    voyage.metadata.legacyWarnings = voyage.metadata.legacyWarnings || [];
+    if (!voyage.metadata.legacyWarnings.includes("REVIEW_STATUS_CONVERTED_V080")) voyage.metadata.legacyWarnings.push("REVIEW_STATUS_CONVERTED_V080");
+  }
   return voyage;
 }
 
@@ -143,6 +175,7 @@ export function updateExaminerBasis(voyage) {
 export function recalculateVoyages(voyages) {
   voyages.forEach(updateCandidateDays);
   convertAll(voyages);
+  voyages.forEach(normaliseLegacyReview);
   voyages.forEach(updateExaminerBasis);
   return voyages;
 }
