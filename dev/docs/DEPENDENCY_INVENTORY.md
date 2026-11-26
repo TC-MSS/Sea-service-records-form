@@ -1,10 +1,14 @@
-# Dependency Inventory — Sea Service Records Form v0.7.0
+# Dependency Inventory — Sea Service Records Form v0.8.0
 
-Repository snapshot: `Sea-service-records-form-main` (main after v0.6.0-dev.1, downloaded 2026-11-25) plus the v0.7.0 package.
+Repository snapshot: `Sea-service-records-form-main` (main after v0.7.0, downloaded 2026-11-26) plus the v0.8.0 package.
 Generated with `dev/tools/check-deps.mjs` and `dev/tools/check-syntax.mjs`, then reviewed by hand.
 Result: **all local references resolve; no missing targets.**
 
-## 1. What changed in the structure
+## 0. v0.8.0 in one paragraph
+
+No file was added, moved or deleted. The reference graph is the same as v0.7.0 (§2–3). Production files changed: `index.html` (declaration caution). Production runtime modules changed under `dev/js` and `dev/css` (shared with the production page): `candidate.js`, `referenceData.js`, `calculationEngine.js`, `validationEngine.js`, `summaryEngine.js`, `examinerReview.js`, `examinerI18n.js`, `dataModel.js`, `printView.js`, `examiner.css`. `js/app.js` is unchanged. The retired files in §5 are still present (clean-up pull request not yet done).
+
+## 1. What changed in the structure (v0.7.0)
 
 From v0.7.0 the **production candidate page uses the shared modules in `dev/js` and `dev/css`**. The rules live in one file, `dev/js/tp2293Engine.js`, and the candidate page and the examiner page both use it. `dev/` is therefore **production runtime**: do not delete or rename `dev/js` or `dev/css`. (A later release can move them to a neutral folder such as `js/core/`. This one does not, because moving files through the GitHub web upload means deleting each old file by hand.)
 
@@ -57,8 +61,8 @@ No `fetch()` calls: nothing in `data/` is loaded at runtime. No external (CDN) s
 
 | File | Referenced by | Status v0.7.0 | Notes |
 |---|---|---|---|
-| index.html | entry page | **Runtime — changed** | New candidate form on the shared engine. Comment before `<!DOCTYPE html>` removed (quirks-mode defect fixed). |
-| js/app.js | index.html | **Runtime — changed** | One-line entry: `import "../dev/js/candidate.js"`. |
+| index.html | entry page | **Runtime — changed in v0.8.0** | v0.8.0: declaration section id + mandatory caution. (v0.7.0: candidate form on the shared engine; DOCTYPE first.) |
+| js/app.js | index.html | Runtime — unchanged in v0.8.0 | One-line entry: `import "../dev/js/candidate.js"`. |
 | css/app.css | index.html, dev pages | Runtime — unchanged | |
 | examiner.html | entry page | Retain (stub) — unchanged | Replaced functionally by `dev/examiner.html`. |
 | js/examiner-labels.js | examiner.html | Retain — unchanged | Until `examiner.html` is replaced. |
@@ -72,20 +76,21 @@ No `fetch()` calls: nothing in `data/` is loaded at runtime. No external (CDN) s
 | js/voyageAssessmentEngine.js | — | Safe to delete | Obsolete, incompatible codes. |
 | js/1*.js (7 files) | — | Safe to delete | packageV0.5 sources, integrated in `dev/js`. |
 | data/*.json (3 files) | — | Optional | Placeholders. |
-| dev/js/candidate.js | index.html (via js/app.js), dev/index.html | **Runtime (production + dev) — changed** | Shared controller; `<body data-variant>` selects the title. Column K, unvetted label, Import JSON, Export PDF. |
+| dev/js/candidate.js | index.html (via js/app.js), dev/index.html | **Runtime (production + dev) — changed** | v0.8.0: declaration mandatory before Export JSON / PDF. Shared controller; column K, unvetted label, Import JSON, Export PDF. |
 | dev/js/tp2293Engine.js | calculationEngine, summaryEngine, examiner.js | **Runtime — unchanged** | Single source of truth for the rules. |
-| dev/js/calculationEngine.js | candidate, examiner, migration | Runtime — changed | Column K sync; reference value; counted figure. |
-| dev/js/dataModel.js | most modules | Runtime — changed | App version 0.7.0; `iceConditions`; examiner `referenceDays`, `effectiveAcceptedDays`, `statusSetAutomatically`. |
-| dev/js/validationEngine.js | candidate, examiner, summary | Runtime — changed | Ice checks; examiner checks are warnings (never block). |
-| dev/js/summaryEngine.js | candidate, examiner | Runtime — changed | Counted figure, difference, ice totals. |
-| dev/js/examinerReview.js | examiner.js | Runtime — changed | Automatic status (4(d)). |
-| dev/js/migrationEngine.js | storageEngine | Runtime — changed | Older ice code → conditions. |
-| dev/js/storageEngine.js | candidate, examiner | Runtime — changed (comments only) | Keys unchanged. |
-| dev/js/examinerI18n.js | candidate, examiner, printView | Runtime — changed | New EN/FR text. |
-| dev/js/printView.js | candidate, examiner | **Runtime — new** | Read-only copy for Export PDF / Print. |
-| dev/js/examiner.js | dev/examiner.html | Dev — changed | Items 2, 3, 4; PDF. |
-| dev/js/referenceData.js | candidate, examiner, printView | Runtime — unchanged | |
-| dev/css/examiner.css, dev/css/candidate.css | production and dev pages | **Runtime — changed** | |
+| dev/js/calculationEngine.js | candidate, examiner, migration | Runtime — changed | v0.8.0: no basis; final days only for adjustment / information required; legacy review conversion. |
+| dev/js/dataModel.js | most modules | Runtime — changed | v0.8.0: app version 0.8.0; `specialServiceApprovedDays` in the summary. |
+| dev/js/validationEngine.js | candidate, examiner, summary | Runtime — changed | v0.8.0 examiner warnings (no basis, Accepted without converted days). |
+| dev/js/summaryEngine.js | candidate, examiner | Runtime — changed | v0.8.0: approved days per special service, overlapping dates counted once. |
+| dev/js/examinerReview.js | examiner.js | Runtime — changed | v0.8.0: automatic status and basis input removed. |
+| dev/js/migrationEngine.js | storageEngine | Runtime — unchanged in v0.8.0 | Older ice code → conditions. |
+| dev/js/storageEngine.js | candidate, examiner | Runtime — unchanged in v0.8.0 | Keys unchanged. |
+| dev/js/examinerI18n.js | candidate, examiner, printView | Runtime — changed | v0.8.0 EN/FR text. |
+| dev/js/printView.js | candidate, examiner | Runtime — changed | v0.8.0: examiner summary layout; declaration caution copy. |
+| dev/js/examiner.js | dev/examiner.html | Dev — changed | v0.8.0 items 3–6. |
+| dev/js/referenceData.js | candidate, examiner, printView | **Runtime — changed** | v0.8.0: MATE label "Mate in Charge of a Watch" / "Officier de pont en charge du quart à la passerelle". |
+| dev/css/examiner.css | production and dev pages | **Runtime — changed** | v0.8.0: total box, declaration caution. |
+| dev/css/candidate.css | production and dev pages | Runtime — unchanged in v0.8.0 | |
 | dev/index.html, dev/examiner.html | entry pages | Dev — changed | |
 | dev/tests/*, dev/tools/*, dev/package.json, dev/README-DEV.md, dev/docs/* | Node / docs | Retain | |
 
@@ -101,7 +106,7 @@ Verified by `check-deps.mjs` (listed as unreferenced) and by the smoke test, whi
 
 Optional: `data/certificates.json`, `data/vesselThresholds.json`, `data/voyages.json`.
 
-Delete them in a **separate** pull request (INSTALL.md, step 10), so the v0.7.0 change can be undone on its own.
+Delete them in a **separate** pull request (INSTALL_v0.7.0.md, step 10), so each release can be undone on its own.
 
 ## 6. Files that must be retained
 

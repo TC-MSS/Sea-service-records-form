@@ -1,5 +1,12 @@
 /**
- * Examiner review page controller — v0.7.0 development build.
+ * Examiner review page controller — v0.8.0 development build.
+ *
+ * v0.8.0: examiner basis removed; Final accepted days enabled only for "Accepted with adjustment"
+ * and "Additional information required"; "Not reviewed" is only the starting state;
+ * summary reduced to the total (bold, with the certificate applied for), the difference,
+ * "Additional information required" and the approved days per special service.
+ *
+ * Earlier notes:
  *
  * v0.7.0:
  *  - "Schema / record" is no longer displayed (schemaVersion and recordId stay in the saved/exported JSON).
@@ -14,7 +21,7 @@ import { applyExaminerReview, EXAMINER_INPUT_FIELDS } from "./examinerReview.js"
 import { validateVoyage, reasonNeeded, reasonMissing } from "./validationEngine.js";
 import { specializedParts, examinerPrintHtml, printRecord, fileStem } from "./printView.js";
 import { buildSummary } from "./summaryEngine.js";
-import { toNumberOrNull, recalculateVoyages } from "./calculationEngine.js";
+import { toNumberOrNull, recalculateVoyages, finalDaysEnabled } from "./calculationEngine.js";
 import { RULES_VERSION } from "./tp2293Engine.js";
 import * as storage from "./storageEngine.js";
 
@@ -104,14 +111,16 @@ function refreshLine(index) {
   const result = applyExaminerReview(v, readPanel(panel), $("examinerName").value || null);
   const voyageResult = validateVoyage(v);
   const r = v.examinerReview;
-  if (result.statusChanged) panel.querySelector("[data-field=reviewStatus]").value = r.reviewStatus;
+  // v0.8.0 — Final accepted days only for "Accepted with adjustment" / "Additional information required".
+  const finalInput = panel.querySelector("[data-field=finalAcceptedDays]");
+  const enabled = finalDaysEnabled(r.reviewStatus);
+  finalInput.disabled = !enabled;
+  if (!enabled) finalInput.value = "";
+  finalInput.placeholder = r.reviewStatus === "ACCEPTED" && r.referenceDays !== null ? String(r.referenceDays) : "";
+  finalInput.title = r.reviewStatus === "ACCEPTED" ? t(language, "finalDaysHintAccepted") : "";
 
   panel.querySelector(".calcText").textContent = language === "fr" ? v.calculation.explanationFr : v.calculation.explanationEn;
-  const refBox = panel.querySelector(".basisDays");
-  const refValue = r.referenceDays === null
-    ? (r.referenceSource === "CONVERTED_DAYS" ? t(language, "notCalculated") : "—")
-    : String(r.referenceDays);
-  refBox.innerHTML = `${esc(refValue)}<span class="refSource">${esc(r.referenceSource ? t(language, `refSource_${r.referenceSource}`) : "")}</span>`;
+  panel.querySelector(".basisDays").textContent = r.referenceDays === null ? t(language, "notCalculated") : String(r.referenceDays);
   panel.querySelector(".countedDays").textContent = String(r.effectiveAcceptedDays ?? 0);
 
   // Neutral "(required)" indicator when a reason is needed; red only while the reason is empty.
@@ -160,15 +169,13 @@ function refreshSummary() {
   const diffEl = $("sumDifference");
   diffEl.textContent = diff === null ? "—" : diff > 0 ? `+${diff}` : String(diff);
   diffEl.className = diff === null || diff === 0 ? "" : diff < 0 ? "diffNeg" : "diffPos";
-  $("sumFinalLines").textContent = s.examinerDetermination.linesWithFinalDays;
-  $("sumMissingReason").textContent = s.examinerDetermination.linesMissingAdjustmentReason;
-  $("sumReviewed").textContent = s.examinerDetermination.recordsReviewed;
-  $("sumNotReviewed").textContent = s.examinerDetermination.recordsNotReviewed;
-  $("sumAccepted").textContent = s.examinerDetermination.recordsAccepted;
-  $("sumAdjusted").textContent = s.examinerDetermination.recordsAcceptedWithAdjustment;
   $("sumInfo").textContent = s.examinerDetermination.recordsRequiringInformation;
-  $("sumRejected").textContent = s.examinerDetermination.recordsRejected;
-  $("sumErrors").textContent = linesWithErrors;
+  const cert = record.application.certificateAppliedFor?.code;
+  $("sumCertificate").textContent = labelFor(CERTIFICATES, cert, language) || "—";
+  const services = Object.entries(s.examinerDetermination.specialServiceApprovedDays || {});
+  $("sumSpecialServices").innerHTML = services.length
+    ? services.map(([code, days]) => `<li data-service="${code}">${esc(t(language, code))}: <strong>${days}</strong></li>`).join("")
+    : `<li>${esc(t(language, "noSpecialService"))}</li>`;
   return linesWithErrors;
 }
 

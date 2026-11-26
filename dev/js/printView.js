@@ -1,5 +1,5 @@
 /**
- * Print / PDF view — v0.7.0 (shared by the production and development pages).
+ * Print / PDF view — v0.8.0 (shared by the production and development pages).
  *
  * "Export PDF / Print" builds a clean, read-only copy of the record in #printView
  * and opens the browser's print window; the user chooses "Save as PDF" to create
@@ -100,38 +100,45 @@ export function candidatePrintHtml(record, summary, lang, title) {
     <p>${record.candidate.declarationAccepted ? "☒" : "☐"} ${esc(t(lang, "declaration"))}${record.candidate.declarationDate ? ` (${esc(record.candidate.declarationDate)})` : ""}</p>`;
 }
 
-/** Examiner copy (dev/examiner.html). */
+/** Examiner copy (dev/examiner.html) — v0.8.0 layout. */
 export function examinerPrintHtml(record, summary, lang) {
   const reviews = record.voyages.map((v, i) => {
     const r = v.examinerReview;
     const checks = ["vesselVerified", "capacityVerified", "datesVerified", "specializedServiceVerified", "supportingDocumentsVerified"]
       .map((k) => `${r[k] ? "☒" : "☐"} ${esc(t(lang, k))}`).join(" &nbsp; ");
-    const ref = r.referenceDays === null ? "—" : `${r.referenceDays} (${t(lang, `refSource_${r.referenceSource}`)})`;
-    return `<tr><td>${i + 1}</td><td>${esc(t(lang, r.reviewStatus))}</td><td>${r.examinerBasis === "NONE" ? "—" : esc(t(lang, r.examinerBasis))}</td>
-      <td class="n">${esc(ref)}</td><td class="n">${dash(r.finalAcceptedDays)}</td><td class="n"><strong>${esc(r.effectiveAcceptedDays)}</strong></td>
+    const status = r.reviewStatus === "NOT_REVIEWED" ? "—" : t(lang, r.reviewStatus);
+    return `<tr><td>${i + 1}</td><td>${esc(status)}</td>
+      <td class="n">${r.referenceDays === null ? esc(t(lang, "notCalculated")) : esc(r.referenceDays)}</td><td class="n">${dash(r.finalAcceptedDays)}</td><td class="n"><strong>${esc(r.effectiveAcceptedDays)}</strong></td>
       <td>${dash(r.adjustmentReason)}</td><td>${dash(r.examinerComments)}</td></tr>
-      <tr class="pvChecks"><td></td><td colspan="7">${checks}</td></tr>`;
+      <tr class="pvChecks"><td></td><td colspan="6">${checks}</td></tr>`;
   }).join("");
   const e = summary.examinerDetermination;
   const diff = e.differenceFromConverted === null ? "—" : (e.differenceFromConverted > 0 ? `+${e.differenceFromConverted}` : String(e.differenceFromConverted));
-  const heads = ["line", "reviewStatus", "examinerBasis", "referenceDays", "finalAcceptedDays", "countedDays", "adjustmentReason", "examinerComments"];
+  const heads = ["line", "reviewStatus", "referenceDaysConverted", "finalAcceptedDays", "countedDays", "adjustmentReason", "examinerComments"];
+  const cert = labelFor(CERTIFICATES, record.application.certificateAppliedFor?.code, lang) || "—";
+  const services = Object.entries(e.specialServiceApprovedDays || {});
   return `${header(record, lang, t(lang, "examinerPrintTitle"), false)}
     <h2>${esc(t(lang, "seaServiceRecords"))}</h2>${serviceTable(record, lang, "convertedDays")}
     ${explanations(record, lang)}
     <h2>${esc(t(lang, "examinerReviewPrint"))}</h2>
     <table class="pvTable"><thead><tr>${heads.map((h) => `<th>${esc(t(lang, h))}</th>`).join("")}</tr></thead><tbody>${reviews}</tbody></table>
     <h2>${esc(t(lang, "summary"))}</h2>
-    ${kvTable([
-      ...conversionSummary(summary, lang),
-      ["totalFinalAcceptedDays", `${e.totalFinalAcceptedDays} (${num(e.totalFinalAcceptedMonths, lang)} ${t(lang, "months")})`],
-      ["differenceFromConverted", diff], ["linesWithFinalDays", e.linesWithFinalDays], ["linesMissingReason", e.linesMissingAdjustmentReason],
-      ["recordsAccepted", e.recordsAccepted], ["recordsAcceptedWithAdjustment", e.recordsAcceptedWithAdjustment],
-      ["recordsRequiringInformation", e.recordsRequiringInformation], ["recordsRejected", e.recordsRejected], ["recordsNotReviewed", e.recordsNotReviewed]
-    ], lang)}
+    ${kvTable(conversionSummary(summary, lang), lang)}
+    <h2>${esc(t(lang, "examinerDetermination"))}</h2>
+    <p class="pvTotal"><strong>${esc(t(lang, "totalFinalAcceptedDays"))}: ${esc(e.totalFinalAcceptedDays)} (${esc(num(e.totalFinalAcceptedMonths, lang))} ${esc(t(lang, "months"))})</strong><br>
+      ${esc(t(lang, "certificateForTotal"))}: <strong>${esc(cert)}</strong></p>
+    ${kvTable([["differenceFromConverted", diff], ["recordsRequiringInformation", e.recordsRequiringInformation]], lang)}
+    <h3>${esc(t(lang, "specialServiceApproved"))}</h3>
+    ${services.length ? kvTable(services.map(([code, days]) => [code, days]), lang) : `<p>${esc(t(lang, "noSpecialService"))}</p>`}
     <p class="pvNote">${esc(t(lang, "summaryNote"))}</p>
     <h2>${esc(t(lang, "generalAssessment"))}</h2>
     <p><strong>${esc(t(lang, "examinerName"))}:</strong> ${dash(record.examinerAssessment.examiner.examinerName)}</p>
     <p>${dash(record.examinerAssessment.generalComments)}</p>`;
+}
+
+/** v0.8.0 — shown instead of the candidate copy when the declaration is not ticked. */
+export function declarationMissingPrintHtml(lang) {
+  return `<p class="pvCaution">${esc(t(lang, "declarationRequiredPrint"))}</p>`;
 }
 
 /**

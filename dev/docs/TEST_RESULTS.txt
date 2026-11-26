@@ -1,4 +1,4 @@
-Test run: 2026-11-26T02:14Z  Node v22.23.5  Package 0.7.0
+Test run: 2026-11-26T03:21Z  Node v22.23.5  Package 0.8.0
 
 == Syntax ==
 OK   data/certificates.json
@@ -51,10 +51,12 @@ OK   records.html  WARNING: <!DOCTYPE html> is not the first token (quirks mode)
 All syntax checks passed.
 
 == Dependencies ==
-Unreferenced files (17):
+Unreferenced files (19):
   - data/certificates.json
   - data/vesselThresholds.json
   - data/voyages.json
+  - dev/tests/smoke-candidate.png
+  - dev/tests/smoke-examiner.png
   - js/1calculationEngine.js
   - js/1dataModel.js
   - js/1examinerReview.js
@@ -77,15 +79,12 @@ All local references resolve. OK
 ✔ days on board follow TP 2293 s. 3.3(4): engagement + discharge days = one day
 ✔ days at sea: blank uses days on board; different flagged
 ✔ converted days: null when not calculable (never zero), calculated otherwise
-✔ examiner basis options are exactly the four required
-✔ adjustment reason needed when final differs from the basis — a warning, never a block (v0.7.0)
-✔ converted-days basis uses the calculated value
-✔ manual-review line: no reference value, final days still counted, reason asked for
-✔ manual determination always asks for a reason
-✔ v0.7.0: basis optional — accepted without basis or final days counts the converted days; rejected counts 0
-✔ v0.7.0: no basis — final days compared with converted days
-✔ v0.7.0 4(d): final days on a Not reviewed line set the status automatically
-✔ v0.7.0: invalid final days are errors and count 0
+✔ v0.8.0 item 4: examiner basis removed — reference is always the converted days
+✔ v0.8.0 item 3: Accepted counts converted days; final days only with adjustment / information required
+✔ v0.8.0: Accepted on a manual-review line counts 0 with a warning
+✔ v0.8.0: invalid final days are errors and count 0
+✔ v0.8.0: reviews saved by v0.6/v0.7 keep the examiner's figure
+✔ v0.8.0 item 6: approved days per special service, overlapping dates counted once
 ✔ v0.7.0 column K: several ice conditions, each with days; legacy code kept in step
 ✔ v0.7.0 column K: older single ice code converts to conditions without days
 ✔ migration of production 0.4.0 record
@@ -95,7 +94,8 @@ All local references resolve. OK
 ✔ summary distinguishes the four totals
 ✔ every English label has a French translation; renamed name field
 ✔ updateExaminerBasis compares numbers, not strings
-✔ v0.7.0: PDF/print copies carry the unvetted label (candidate) and the examiner figures
+✔ PDF/print copies: unvetted label (candidate); v0.8.0 examiner summary with certificate
+✔ v0.8.0 item 1: capacity MATE is 'Mate in Charge of a Watch' / 'Officier de pont en charge du quart à la passerelle'
 ✔ R1 TP 2293 3.3(1),(4) Table 1 (A): discharge − engagement, minimum 1
 ✔ R2 MPR 115(1): 8-hour watch, 1 day = 1 day
 ✔ R3 MPR 115(2) / TP 2293 3.5(1): 12-hour watch = 1.5 days, rounded down
@@ -113,14 +113,14 @@ All local references resolve. OK
 ✔ TP 2293 3.25: barge — deck service manual review, engine service calculated
 ✔ explanations are produced in both languages with references
 ✔ missing dates → not calculated, null
-ℹ tests 40
+ℹ tests 38
 ℹ suites 0
-ℹ pass 40
+ℹ pass 38
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 145.906228
+ℹ duration_ms 152.307144
 
 == Smoke tests (Playwright / Chromium) ==
 PASS  production index.html loads without script errors or 404s; old calculator not loaded
@@ -129,10 +129,12 @@ PASS  production shows the UNVETTED label in English and French
 PASS  production loads the 0.4.0 record saved before this release (R per TP 2293 s. 3.3(4))
 PASS  production column K: several ice conditions with days
 PASS  production save: 0.5.0 under the candidate key; old 'SeaServiceRecord' never overwritten
+PASS  v0.8.0 item 1: capacity 'Mate in Charge of a Watch' / 'Officier de pont en charge du quart à la passerelle'
+PASS  v0.8.0 item 2: Export JSON blocked until the Applicant Declaration is ticked; caution shown
 PASS  production Export JSON downloads the 0.5.0 file to e-mail
 PASS  production Import JSON re-opens a file (pre-0.4 file converted)
 PASS  production loads a record saved by the v0.6.0 development candidate form
-PASS  production Export PDF / Print: only the read-only copy prints, with the unvetted label
+PASS  production Export PDF / Print: blocked without the declaration; read-only copy with unvetted label once ticked
 PASS  production: no uncaught script errors
 PASS  dev/examiner.html loads without script errors or 404s
 PASS  end-to-end: examiner loads the record saved by production index.html (same converted days)
@@ -140,17 +142,16 @@ PASS  examiner: 'Schema / record' not displayed; schemaVersion and recordId kept
 PASS  load legacy 0.4.0 fixture from browser storage
 PASS  Converted days column follows 'Days at sea, if different' and shows TP 2293 values
 PASS  'Capacity verified' and 'Specialized service verified' are in the page markup (EN)
-PASS  examiner controls exist on every line with the four basis options
+PASS  v0.8.0 items 3–4: no examiner basis; 'Not reviewed' not selectable; final days disabled until a status allows them
+PASS  v0.8.0 item 3: Accepted counts the converted days; final days stay disabled
 PASS  adjustment reason: neutral '(required)' when needed, red only while empty (bug 3)
-PASS  no reason needed when final days equal the basis
-PASS  Converted days basis uses the calculated value
-PASS  summary shows the four distinct totals
-PASS  French: labels, months, input preserved across language switch
-PASS  save stores 0.5.0 draft separately with calculated days; candidate record untouched
+PASS  v0.8.0 item 3: Additional information required enables final days; Rejected disables and counts 0
+PASS  v0.8.0 items 5–6: summary — bold total with certificate, reduced list, special-service totals
+PASS  French: labels, capacity, certificate, months, input preserved across language switch
+PASS  save stores 0.5.0 draft separately; candidate record untouched
 PASS  reload restores the examiner draft
-PASS  bug 4: final accepted days override everything (Not reviewed → status set automatically)
-PASS  bug 4: final days over converted days (no basis) count; rejected counts 0; save not blocked
-PASS  examiner Export PDF / Print copy shows examiner figures
+PASS  examiner Export PDF / Print copy: bold total with certificate, special services
+PASS  examiner draft saved by v0.7.0 (Accepted with final days ≠ converted) loads as 'Accepted with adjustment'
 PASS  import pre-0.4 JSON: legacy positionVerified/seaServiceVerified/polar/ice/DP/offshore/tanker
 PASS  dev/index.html loads, converts the production record and shows Given Name
 PASS  candidate form calculates automatically as the candidate types
@@ -158,4 +159,4 @@ PASS  candidate form: French labels and manual review display
 PASS  candidate save uses its own key; examiner loads it with calculated days
 PASS  no uncaught script errors during the dev session
 
-34/34 smoke tests passed.
+35/35 smoke tests passed.

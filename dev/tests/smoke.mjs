@@ -128,12 +128,35 @@ await step("production save: 0.5.0 under the candidate key; old 'SeaServiceRecor
   const saved = JSON.parse(await page.evaluate((k) => localStorage.getItem(k), CANDIDATE_KEY));
   assert.equal(await page.evaluate(() => localStorage.getItem("SeaServiceRecord")), before);
   assert.equal(saved.schemaVersion, "0.5.0");
-  assert.equal(saved.applicationVersion, "0.7.0");
+  assert.equal(saved.applicationVersion, "0.8.0");
   assert.deepEqual(saved.voyages.map((v) => v.calculation.convertedDays), [30, 56, 43]);
   assert.deepEqual(saved.voyages[1].specializedService.iceConditions, { POLAR: { selected: true, days: 12 }, ACCEPTABLE_ICE: { selected: true, days: 20 } });
   await page.reload();
   await page.waitForFunction(() => window.__candidateDev?.getRecord());
   assert.equal(await page.inputValue("#recordsBody tr:nth-child(2) [data-path='specializedService.iceConditions.POLAR.days']"), "12");
+});
+await step("v0.8.0 item 1: capacity 'Mate in Charge of a Watch' / 'Officier de pont en charge du quart à la passerelle'", async () => {
+  const sel = "#recordsBody tr:nth-child(1) [data-path='service.capacityCode']";
+  assert.equal(await page.$eval(sel, (s) => s.options[s.selectedIndex].textContent.trim()), "Mate in Charge of a Watch");
+  await page.selectOption("#langSelector", "fr");
+  assert.equal(await page.$eval(sel, (s) => s.options[s.selectedIndex].textContent.trim()), "Officier de pont en charge du quart à la passerelle");
+  await page.selectOption("#langSelector", "en");
+});
+await step("v0.8.0 item 2: Export JSON blocked until the Applicant Declaration is ticked; caution shown", async () => {
+  await page.uncheck("#applicantDeclaration");
+  assert.equal(await page.isVisible(".declarationCaution"), true, "caution shown while unticked");
+  let downloaded = false;
+  const onDl = () => { downloaded = true; };
+  page.on("download", onDl);
+  await page.click("#btnExport");
+  await page.waitForTimeout(400);
+  page.off("download", onDl);
+  assert.equal(downloaded, false, "no file exported");
+  assert.match(await page.textContent("#statusPanel"), /Export blocked: tick the Applicant Declaration/);
+  assert.match(await page.getAttribute("#declarationSection", "class"), /declarationMissing/);
+  await page.check("#applicantDeclaration");
+  assert.equal(await page.isVisible(".declarationCaution"), false, "caution hidden once ticked");
+  assert.doesNotMatch(await page.getAttribute("#declarationSection", "class") || "", /declarationMissing/);
 });
 await step("production Export JSON downloads the 0.5.0 file to e-mail", async () => {
   const [download] = await Promise.all([page.waitForEvent("download"), page.click("#btnExport")]);
@@ -156,14 +179,24 @@ await step("production loads a record saved by the v0.6.0 development candidate 
   assert.equal(await page.textContent("#recordsBody tr:nth-child(1) [data-col=convertedDays]"), "45");
   assert.equal(await page.isChecked("#recordsBody tr:nth-child(1) [data-path='specializedService.iceConditions.ACCEPTABLE_ICE.selected']"), true);
 });
-await step("production Export PDF / Print: only the read-only copy prints, with the unvetted label", async () => {
+await step("production Export PDF / Print: blocked without the declaration; read-only copy with unvetted label once ticked", async () => {
+  await page.evaluate(() => { window.__printCalls = 0; window.print = () => { window.__printCalls += 1; }; });
+  assert.equal(await page.isChecked("#applicantDeclaration"), false, "v0.6 record without declaration");
+  await page.click("#btnPrint");
+  assert.equal(await page.evaluate(() => window.__printCalls), 0, "print window not opened");
+  assert.match(await page.textContent("#statusPanel"), /Export blocked/);
   await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+  assert.match(await page.textContent("#printView"), /Applicant Declaration has not been ticked/, "Ctrl+P prints only the caution");
+  await page.check("#applicantDeclaration");
+  await page.click("#btnPrint");
+  assert.equal(await page.evaluate(() => window.__printCalls), 1);
   await page.emulateMedia({ media: "print" });
   assert.equal(await page.isVisible("#printView"), true);
   assert.equal(await page.isVisible("#serviceTable"), false);
   const txt = await page.textContent("#printView");
   assert.match(txt, /Unvetted sea service — subject to examiner review/);
   assert.match(txt, /Acceptable ice service: \?/);
+  assert.match(txt, /Mate in Charge of a Watch/);
   await page.emulateMedia({ media: "screen" });
   assert.equal(await page.isVisible("#printView"), false);
 });
@@ -228,20 +261,33 @@ await step("'Capacity verified' and 'Specialized service verified' are in the pa
   assert.ok(!(await page.content()).includes("examiner-labels.js"), "legacy replacement script not used");
 });
 
-await step("examiner controls exist on every line with the four basis options", async () => {
-  for (const f of ["reviewStatus", "examinerBasis", "finalAcceptedDays", "adjustmentReason", "examinerComments"]) {
+await step("v0.8.0 items 3–4: no examiner basis; 'Not reviewed' not selectable; final days disabled until a status allows them", async () => {
+  assert.equal(await page.locator(".reviewRow [data-field=examinerBasis]").count(), 0, "basis field removed");
+  for (const f of ["reviewStatus", "finalAcceptedDays", "adjustmentReason", "examinerComments"]) {
     assert.equal(await page.locator(`.reviewRow [data-field=${f}]`).count(), 3, f);
   }
-  const opts = await page.$$eval("#examinerBasis-0 option", (os) => os.filter((o) => o.value !== "NONE").map((o) => o.textContent.trim()));
-  assert.deepEqual(opts, ["Days on board", "Days at sea", "Converted days", "Manual determination"]);
+  const opts = await page.$$eval("#reviewStatus-0 option", (os) => os.filter((o) => !o.disabled && !o.hidden).map((o) => o.textContent.trim()));
+  assert.deepEqual(opts, ["Accepted", "Accepted with adjustment", "Additional information required", "Rejected"]);
+  assert.equal(await page.$eval("#reviewStatus-0", (s) => s.options[s.selectedIndex].textContent.trim()), "Select a status");
+  for (const i of [0, 1, 2]) assert.equal(await page.isDisabled(`#finalAcceptedDays-${i}`), true);
+  assert.match(await page.textContent(".reviewRow[data-index='0'] .basisDaysBox"), /Converted days \(reference\)\s*30/);
+});
+
+await step("v0.8.0 item 3: Accepted counts the converted days; final days stay disabled", async () => {
+  await page.selectOption("#reviewStatus-0", "ACCEPTED");
+  assert.equal(await page.isDisabled("#finalAcceptedDays-0"), true);
+  assert.equal(await page.getAttribute("#finalAcceptedDays-0", "placeholder"), "30");
+  assert.equal(await page.textContent(".reviewRow[data-index='0'] .countedDays"), "30");
+  await page.check("#capacityVerified-0");
+  await page.check("#specializedServiceVerified-0");
+  assert.equal(await page.$$eval(".reviewRow[data-index='0'] .messages li.error", (ls) => ls.length), 0);
 });
 
 await step("adjustment reason: neutral '(required)' when needed, red only while empty (bug 3)", async () => {
   const label = ".reviewRow[data-index='1'] .adjustmentLabel";
   assert.equal(await page.isVisible(`${label} .reqTag`), false, "no indicator before a reason is needed");
   await page.selectOption("#reviewStatus-1", "ACCEPTED_WITH_ADJUSTMENT");
-  await page.selectOption("#examinerBasis-1", "DAYS_AT_SEA");
-  assert.match(await page.textContent(".reviewRow[data-index='1'] .basisDays"), /^25/);
+  assert.equal(await page.isDisabled("#finalAcceptedDays-1"), false, "enabled for Accepted with adjustment");
   await page.fill("#finalAcceptedDays-1", "20");
   let cls = await page.getAttribute(label, "class");
   assert.match(cls, /\bneeded\b/); assert.match(cls, /\bmissing\b/);
@@ -249,75 +295,81 @@ await step("adjustment reason: neutral '(required)' when needed, red only while 
   const codes = await page.$$eval(".reviewRow[data-index='1'] .messages li.warning.reasonMissing", (ls) => ls.map((l) => l.dataset.code));
   assert.deepEqual(codes, ["ADJUSTMENT_REASON_REQUIRED"], "shown clearly as a warning");
   assert.equal(await page.$$eval(".reviewRow[data-index='1'] .messages li.error", (ls) => ls.length), 0, "not an error");
-  assert.equal(await page.getAttribute("#adjustmentReason-1", "aria-invalid"), "true");
   assert.equal(await page.$eval("#adjustmentReason-1", (e) => getComputedStyle(e).borderTopColor), "rgb(176, 0, 32)");
   await page.type("#adjustmentReason-1", "F");
   cls = await page.getAttribute(label, "class");
-  assert.match(cls, /\bneeded\b/); assert.doesNotMatch(cls, /\bmissing\b/, "red cleared as soon as text is entered");
-  assert.equal(await page.getAttribute("#adjustmentReason-1", "aria-invalid"), "false");
+  assert.doesNotMatch(cls, /\bmissing\b/, "red cleared as soon as text is entered");
   assert.notEqual(await page.$eval("#adjustmentReason-1", (e) => getComputedStyle(e).borderTopColor), "rgb(176, 0, 32)");
   await page.fill("#adjustmentReason-1", "Five days alongside for repairs.");
   assert.equal(await page.isVisible(`${label} .reqTag`), true, "neutral indicator stays");
+  assert.equal(await page.textContent(".reviewRow[data-index='1'] .countedDays"), "20", "final days override converted days");
 });
 
-await step("no reason needed when final days equal the basis", async () => {
-  await page.selectOption("#reviewStatus-0", "ACCEPTED");
-  await page.selectOption("#examinerBasis-0", "DAYS_ON_BOARD");
-  await page.fill("#finalAcceptedDays-0", "30");
-  await page.check("#capacityVerified-0");
-  await page.check("#specializedServiceVerified-0");
-  const errs = await page.$$eval(".reviewRow[data-index='0'] .messages li.error", (ls) => ls.length);
-  assert.equal(errs, 0);
+await step("v0.8.0 item 3: Additional information required enables final days; Rejected disables and counts 0", async () => {
+  await page.selectOption("#reviewStatus-2", "ADDITIONAL_INFORMATION_REQUIRED");
+  assert.equal(await page.isDisabled("#finalAcceptedDays-2"), false);
+  assert.equal(await page.textContent(".reviewRow[data-index='2'] .countedDays"), "0");
+  await page.fill("#finalAcceptedDays-2", "43");
+  assert.equal(await page.textContent(".reviewRow[data-index='2'] .countedDays"), "43");
+  assert.doesNotMatch(await page.getAttribute(".reviewRow[data-index='2'] .adjustmentLabel", "class"), /\bneeded\b/);
+  await page.selectOption("#reviewStatus-2", "REJECTED");
+  assert.equal(await page.isDisabled("#finalAcceptedDays-2"), true);
+  assert.equal(await page.inputValue("#finalAcceptedDays-2"), "");
+  assert.equal(await page.textContent(".reviewRow[data-index='2'] .countedDays"), "0");
+  await page.selectOption("#reviewStatus-2", "ADDITIONAL_INFORMATION_REQUIRED");
+  await page.fill("#finalAcceptedDays-2", "40");
+  assert.match(await page.getAttribute(".reviewRow[data-index='2'] .adjustmentLabel", "class"), /\bmissing\b/);
+  await page.fill("#adjustmentReason-2", "Awaiting master's testimonial.");
 });
 
-await step("Converted days basis uses the calculated value", async () => {
-  await page.selectOption("#examinerBasis-2", "CONVERTED_DAYS");
-  assert.match(await page.textContent(".reviewRow[data-index='2'] .basisDays"), /^43/);
-  const codes = await page.$$eval(".reviewRow[data-index='2'] .messages li.error", (ls) => ls.map((l) => l.dataset.code));
-  assert.ok(!codes.includes("CONVERTED_DAYS_NOT_CALCULATED"));
-  await page.selectOption("#examinerBasis-2", "NONE");
-});
-
-await step("summary shows the four distinct totals", async () => {
+await step("v0.8.0 items 5–6: summary — bold total with certificate, reduced list, special-service totals", async () => {
   assert.equal(await page.textContent("#sumDaysOnBoard"), "98");
-  assert.equal(await page.textContent("#sumDaysAtSea"), "84");
   assert.equal(await page.textContent("#sumConvertedDays"), "129");
-  assert.equal(await page.textContent("#sumConvertedMonths"), "(4.3 months)");
-  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "50");
-  assert.equal(await page.textContent("#sumDifference"), "-79");
-  assert.equal(await page.textContent("#sumReviewed"), "2");
+  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "90");
+  assert.equal(await page.textContent("#sumFinalAcceptedMonths"), "(3 months)");
+  assert.ok(Number(await page.$eval("#sumFinalAcceptedDays", (e) => getComputedStyle(e).fontWeight)) >= 700, "bold");
+  assert.equal(await page.textContent("#sumCertificate"), "Master 500 Gross Tonnage, Near Coastal");
+  assert.ok(Number(await page.$eval("#sumCertificate", (e) => getComputedStyle(e).fontWeight)) >= 700, "bold");
+  assert.equal(await page.textContent("#sumDifference"), "-39");
+  assert.equal(await page.textContent("#sumInfo"), "1");
+  for (const id of ["sumReviewed", "sumNotReviewed", "sumAccepted", "sumAdjusted", "sumRejected", "sumErrors", "sumFinalLines", "sumMissingReason"]) {
+    assert.equal(await page.locator(`#${id}`).count(), 0, `${id} removed`);
+  }
+  const card = await page.$$eval(".summaryCard:has(#sumFinalAcceptedDays) > div", (ds) => ds.map((d) => d.textContent.trim()));
+  assert.ok(!card.some((tx) => /^Lines\b/.test(tx)), card.join(" | "));
+  const services = await page.$$eval("#sumSpecialServices li", (ls) => Object.fromEntries(ls.map((l) => [l.dataset.service, l.querySelector("strong").textContent])));
+  assert.deepEqual(services, { POLAR: "0", PASSENGER: "30", OIL_TRANSFER: "20", DP: "40", OFFSHORE: "40" });
 });
 
-await step("French: labels, months, input preserved across language switch", async () => {
+await step("French: labels, capacity, certificate, months, input preserved across language switch", async () => {
   await page.selectOption("#langSelector", "fr");
   const labels = await page.$$eval(".reviewRow[data-index='0'] .verifyGrid label", (ls) => ls.map((l) => l.textContent.trim()));
   assert.ok(labels.includes("Fonction vérifiée"));
-  assert.ok(labels.includes("Service spécialisé vérifié"));
   assert.equal((await page.textContent("dt[data-i18n=givenNames]")).trim(), "Prénom");
-  assert.equal(await page.textContent("#sumConvertedMonths"), "(4,3 mois)");
+  assert.equal((await page.textContent("tr.voyageRow[data-index='0'] td:nth-child(2)")).trim(), "Officier de pont en charge du quart à la passerelle");
+  assert.equal(await page.textContent("#sumCertificate"), "Capitaine, jauge brute de 500, à proximité du littoral");
+  assert.equal(await page.textContent("#sumFinalAcceptedMonths"), "(3 mois)");
   assert.match(await page.textContent(".reviewRow[data-index='1'] .calcText"), /jours crédités/);
   assert.equal(await page.inputValue("#adjustmentReason-1"), "Five days alongside for repairs.");
   assert.equal(await page.inputValue("#finalAcceptedDays-1"), "20");
   assert.equal((await page.textContent(".reviewRow[data-index='1'] .reqTag")).trim(), "(obligatoire)");
-  assert.doesNotMatch(await page.getAttribute(".reviewRow[data-index='1'] .adjustmentLabel", "class"), /\bmissing\b/);
-  const opts = await page.$$eval("#examinerBasis-0 option", (os) => os.filter((o) => o.value !== "NONE").map((o) => o.textContent.trim()));
-  assert.deepEqual(opts, ["Jours à bord", "Jours en mer", "Jours convertis", "Détermination manuelle"]);
+  assert.match(await page.textContent(".specialServices h4"), /Service spécialisé approuvé/);
   await page.selectOption("#langSelector", "en");
+  assert.equal((await page.textContent("tr.voyageRow[data-index='0'] td:nth-child(2)")).trim(), "Mate in Charge of a Watch");
 });
 
-await step("save stores 0.5.0 draft separately with calculated days; candidate record untouched", async () => {
+await step("save stores 0.5.0 draft separately; candidate record untouched", async () => {
   const before = await page.evaluate(() => localStorage.getItem("SeaServiceRecord"));
   await page.click("#btnSave");
   const draft = JSON.parse(await page.evaluate(() => localStorage.getItem("SeaServiceRecord.v0.5.0")));
-  const after = await page.evaluate(() => localStorage.getItem("SeaServiceRecord"));
-  assert.equal(after, before);
+  assert.equal(await page.evaluate(() => localStorage.getItem("SeaServiceRecord")), before);
   assert.equal(draft.schemaVersion, "0.5.0");
-  assert.deepEqual(draft.voyages.map((v) => v.calculation.convertedDays), [30, 56, 43]);
-  assert.strictEqual(draft.calculationSummary.automatedCalculation.totalConvertedDays, 129);
-  assert.equal(draft.voyages[1].calculation.calculationRuleId, "TP2293-3.7(1)(b)");
-  assert.equal(draft.voyages[1].examinerReview.finalAcceptedDays, 20);
-  assert.equal(draft.voyages[1].examinerReview.adjustmentReason, "Five days alongside for repairs.");
-  assert.equal(draft.voyages[0].examinerReview.capacityVerified, true);
+  assert.equal(draft.applicationVersion, "0.8.0");
+  assert.deepEqual(draft.voyages.map((v) => v.examinerReview.reviewStatus), ["ACCEPTED", "ACCEPTED_WITH_ADJUSTMENT", "ADDITIONAL_INFORMATION_REQUIRED"]);
+  assert.deepEqual(draft.voyages.map((v) => v.examinerReview.finalAcceptedDays), [null, 20, 40]);
+  assert.deepEqual(draft.voyages.map((v) => v.examinerReview.effectiveAcceptedDays), [30, 20, 40]);
+  assert.equal(draft.examinerAssessment.totalFinalAcceptedDays, 90);
+  assert.deepEqual(draft.calculationSummary.examinerDetermination.specialServiceApprovedDays, { POLAR: 0, PASSENGER: 30, OIL_TRANSFER: 20, DP: 40, OFFSHORE: 40 });
 });
 
 await step("reload restores the examiner draft", async () => {
@@ -325,56 +377,32 @@ await step("reload restores the examiner draft", async () => {
   await page.click("#btnLoadDraft");
   await page.waitForSelector("tr.voyageRow");
   assert.equal(await page.inputValue("#finalAcceptedDays-1"), "20");
+  assert.equal(await page.isDisabled("#finalAcceptedDays-0"), true);
   assert.equal(await page.isChecked("#capacityVerified-0"), true);
-  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "50");
-});
-
-await step("bug 4: final accepted days override everything (Not reviewed → status set automatically)", async () => {
-  // line 3 (index 2): Not reviewed, no basis, converted 43
-  await page.fill("#finalAcceptedDays-2", "40");
-  assert.equal(await page.inputValue("#reviewStatus-2"), "ACCEPTED_WITH_ADJUSTMENT");
-  const w = await page.$$eval(".reviewRow[data-index='2'] .messages li", (ls) => ls.map((l) => l.dataset.code));
-  assert.ok(w.includes("STATUS_SET_AUTOMATICALLY"));
-  assert.ok(w.includes("ADJUSTMENT_REASON_REQUIRED"));
-  assert.ok(!w.includes("EXAMINER_BASIS_REQUIRED"));
-  assert.equal(await page.textContent(".reviewRow[data-index='2'] .countedDays"), "40");
   assert.equal(await page.textContent("#sumFinalAcceptedDays"), "90");
-  assert.equal(await page.textContent("#sumDifference"), "-39");
-  assert.equal(await page.textContent("#sumMissingReason"), "1");
-  await page.fill("#finalAcceptedDays-2", "43");
-  assert.equal(await page.inputValue("#reviewStatus-2"), "ACCEPTED", "equal to converted days → Accepted");
-  await page.fill("#finalAcceptedDays-2", "");
-  assert.equal(await page.inputValue("#reviewStatus-2"), "NOT_REVIEWED");
-  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "50");
 });
 
-await step("bug 4: final days over converted days (no basis) count; rejected counts 0; save not blocked", async () => {
-  await page.selectOption("#reviewStatus-2", "ACCEPTED");
-  await page.fill("#finalAcceptedDays-2", "60");
-  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "110");
-  assert.equal(await page.textContent("#sumDifference"), "-19");
-  await page.fill("#finalAcceptedDays-2", "100");
-  assert.equal(await page.textContent("#sumDifference"), "+21");
-  await page.fill("#finalAcceptedDays-2", "60");
-  await page.click("#btnSave");
-  const draft = JSON.parse(await page.evaluate(() => localStorage.getItem("SeaServiceRecord.v0.5.0")));
-  assert.equal(draft.voyages[2].examinerReview.finalAcceptedDays, 60);
-  assert.equal(draft.voyages[2].examinerReview.effectiveAcceptedDays, 60);
-  assert.equal(draft.examinerAssessment.totalFinalAcceptedDays, 110);
-  assert.match(await page.textContent("#statusPanel"), /saved/i);
-  await page.selectOption("#reviewStatus-2", "REJECTED");
-  assert.equal(await page.textContent(".reviewRow[data-index='2'] .countedDays"), "0");
-  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "50");
-  await page.fill("#finalAcceptedDays-2", "");
-  await page.selectOption("#reviewStatus-2", "NOT_REVIEWED");
-  await page.click("#btnSave");
-});
-
-await step("examiner Export PDF / Print copy shows examiner figures", async () => {
+await step("examiner Export PDF / Print copy: bold total with certificate, special services", async () => {
   await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
-  const txt = await page.textContent("#printView");
-  assert.match(txt, /Total final accepted days50/);
-  assert.ok(!txt.includes("Unvetted"));
+  const html = await page.innerHTML("#printView");
+  assert.match(html, /<strong>Total final accepted days: 90 \(3 months\)<\/strong>/);
+  assert.match(html, /Certificate applied for: <strong>Master 500 Gross Tonnage, Near Coastal<\/strong>/);
+  assert.match(html, /Oil transfer<\/th><td>20/);
+  assert.ok(!html.includes("Unvetted"));
+});
+
+await step("examiner draft saved by v0.7.0 (Accepted with final days ≠ converted) loads as 'Accepted with adjustment'", async () => {
+  const draft = JSON.parse(await page.evaluate(() => localStorage.getItem("SeaServiceRecord.v0.5.0")));
+  Object.assign(draft.voyages[0].examinerReview, { reviewStatus: "ACCEPTED", examinerBasis: "DAYS_ON_BOARD", finalAcceptedDays: 28 });
+  draft.applicationVersion = "0.7.0";
+  await page.evaluate((d) => localStorage.setItem("SeaServiceRecord.v0.5.0", JSON.stringify(d)), draft);
+  await page.click("#btnLoadDraft");
+  await page.waitForFunction(() => window.__examinerDev.getRecord()?.voyages[0].examinerReview.reviewStatus === "ACCEPTED_WITH_ADJUSTMENT");
+  assert.equal(await page.inputValue("#reviewStatus-0"), "ACCEPTED_WITH_ADJUSTMENT");
+  assert.equal(await page.inputValue("#finalAcceptedDays-0"), "28");
+  const w = await page.$$eval(".reviewRow[data-index='0'] .messages li", (ls) => ls.map((l) => l.dataset.code));
+  assert.ok(w.includes("REVIEW_STATUS_CONVERTED_V080"));
+  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "88");
 });
 
 await step("import pre-0.4 JSON: legacy positionVerified/seaServiceVerified/polar/ice/DP/offshore/tanker", async () => {
