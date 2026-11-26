@@ -6,11 +6,15 @@
  *    positionVerified / seaServiceVerified examiner flags);
  *  - 0.4.0 records saved by the production index.html (key "SeaServiceRecord");
  *  - 0.5.0 records (normalised: missing fields are filled with defaults).
+ *    v0.7.0 additions to the 0.5.0 schema are additive: specializedService.iceConditions
+ *    (column K, several conditions each with days) is created from the older single
+ *    iceService code when it is missing; examinerReview.referenceDays / effectiveAcceptedDays /
+ *    statusSetAutomatically are recalculated.
  *
  * Original legacy flags are preserved in voyage.metadata.legacyFields so that
  * nothing entered under an older version is lost.
  */
-import { createVoyage, createSeaServiceRecord, createExaminerReview, fillDefaults, SCHEMA_VERSION, APPLICATION_VERSION } from "./dataModel.js";
+import { createVoyage, createSeaServiceRecord, createExaminerReview, fillDefaults, iceConditionsFromService, SCHEMA_VERSION, APPLICATION_VERSION } from "./dataModel.js";
 import { recalculateVoyages, toNumberOrNull, updateCandidateDays } from "./calculationEngine.js";
 
 const LEGACY_VOYAGE_FLAGS = [
@@ -78,11 +82,15 @@ export function migrateVoyageToV050(old = {}, sequenceNumber = 1) {
   v.specializedService = {
     ...v.specializedService,
     iceService: legacyIceService(old),
+    iceConditions: old.iceConditions && typeof old.iceConditions === "object"
+      ? JSON.parse(JSON.stringify(old.iceConditions))
+      : iceConditionsFromService(legacyIceService(old)),
     passengerService: truthy(old.passenger ?? old.passengerService),
     transferOperation: legacyTransferOperation(old),
     fishingService: truthy(old.fishing ?? old.fishingService),
     dpOffshoreService: legacyDpOffshore(old)
   };
+  updateCandidateDays(v); // syncs the ice conditions with the combined iceService code
   const tanker = truthy(old.tanker) || truthy(old.tankerService);
   if (tanker && v.specializedService.transferOperation === "NONE") v.metadata.legacyWarnings.push("TRANSFER_OPERATION_TYPE_REQUIRED");
 
@@ -98,6 +106,9 @@ export function migrateVoyageToV050(old = {}, sequenceNumber = 1) {
 /** Normalise a 0.5.0 voyage: fill missing fields, keep converted days null if absent. */
 export function normaliseVoyage(v, sequenceNumber) {
   const template = createVoyage(sequenceNumber);
+  if (v.specializedService && !v.specializedService.iceConditions) {
+    v.specializedService.iceConditions = iceConditionsFromService(v.specializedService.iceService);
+  }
   fillDefaults(v, template);
   fillDefaults(v.examinerReview, createExaminerReview());
   updateCandidateDays(v);

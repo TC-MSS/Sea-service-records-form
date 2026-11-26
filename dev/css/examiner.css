@@ -71,3 +71,39 @@ tr.reviewRow > td{ padding:0 0 14px 0; border-left:4px solid #003366; background
 /* v0.6.0 — calculation display */
 .converted{ font-weight:700; color:#0b5d1e; cursor:help; border-bottom:1px dotted #0b5d1e; }
 .calcExplanation{ margin:8px 0 0; font-size:13px; background:#f1f7f1; border-left:3px solid #0b5d1e; padding:6px 10px; }
+
+/* v0.7.0 — examiner: optional basis, reference days, required indicator */
+.adjustmentLabel .reqTag{ display:none; font-weight:normal; color:#555; margin-left:4px; }
+.adjustmentLabel.needed .reqTag{ display:inline; }
+.adjustmentLabel.missing > span, .adjustmentLabel.missing .reqTag{ color:#b00020; font-weight:600; }
+.adjustmentLabel.missing textarea{ border-color:#b00020; outline:1px solid #b00020; }
+.countedBox{ font-weight:600; }
+.countedBox output{ display:block; padding:8px; border:1px solid #0b5d1e; border-radius:4px; background:#f1f7f1; min-height:36px; }
+.refSource{ display:block; font-size:11px; color:#555; font-weight:normal; }
+.messages li.reasonMissing{ color:#b00020; font-weight:600; }
+.messages li.info{ color:#00509e; }
+.diffNeg{ color:#b00020; } .diffPos{ color:#0b5d1e; }
+
+/* v0.7.0 — Export PDF / Print: only the read-only copy (#printView) is printed */
+.printView{ display:none; }
+@media print{
+    @page{ size:landscape; margin:10mm; }
+    body > *:not(#printView){ display:none !important; }
+    body{ margin:0; background:#fff; }
+    .printView{ display:block !important; font-size:10px; color:#000; }
+    .printView h1{ font-size:16px; margin:0 0 4px; }
+    .printView h2{ font-size:12px; margin:10px 0 4px; border-bottom:1px solid #003366; }
+    .printView table{ border-collapse:collapse; width:100%; margin:0 0 6px; }
+    .printView th, .printView td{ border:1px solid #999; padding:2px 4px; text-align:left; vertical-align:top; }
+    .printView th{ color:#000 !important; font-weight:600; }
+    .printView thead th{ background:#e6edf5 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .printView td.n{ text-align:right; white-space:nowrap; }
+    .printView .pvInfo{ width:auto; }
+    .printView .pvInfo th{ width:260px; background:#f3f3f3; }
+    .printView tr{ page-break-inside:avoid; }
+    .printView .pvChecks td{ border-top:none; font-size:9px; }
+    .printView .pvUnvetted{ border:2px dashed #000; padding:4px 8px; font-weight:700; text-transform:uppercase; }
+    .printView .pvUnvetted span{ font-weight:normal; font-style:italic; text-transform:none; }
+    .printView .pvMeta, .printView .pvNote{ font-size:9px; color:#333; }
+    .printView .pvExplain{ margin:0; padding-left:16px; }
+}

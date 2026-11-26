@@ -1,23 +1,36 @@
 /**
- * Candidate form controller — development v0.6.0.
+ * Candidate form controller — v0.7.0.
+ * Shared by the PRODUCTION candidate page (index.html, through js/app.js) and the
+ * development candidate page (dev/index.html). <body data-variant="production|development">
+ * selects the page title; everything else is identical, so both pages always apply the
+ * same rules as the examiner review (tp2293Engine.js — single source of truth).
+ *
  * Builds a v0.5.0-schema record and calculates converted days automatically
- * (TP 2293 Chapter 3 / MPR ss. 115–117) as the candidate types.
+ * (TP 2293 Chapter 3 / MPR ss. 115–117) as the candidate types. Results are
+ * labelled UNVETTED — subject to examiner review.
+ *
+ * Storage: this browser only (key "SeaServiceRecord.v0.5.0.candidate"). The older
+ * production record "SeaServiceRecord" (0.4.0) is read and converted in memory, never
+ * overwritten. Export JSON produces the file the candidate e-mails to the examiner;
+ * Import JSON re-opens such a file; Export PDF / Print produces a PDF copy.
  */
 import { TEXT, t } from "./examinerI18n.js";
 import { CAPACITIES, VESSEL_TYPES, CERTIFICATES, PROPULSION, VOYAGE_CLASSES } from "./referenceData.js";
-import { createSeaServiceRecord, createVoyage } from "./dataModel.js";
+import { createSeaServiceRecord, createVoyage, ENUMS } from "./dataModel.js";
 import { recalculateVoyages, toNumberOrNull } from "./calculationEngine.js";
 import { validateVoyage } from "./validationEngine.js";
 import { buildSummary } from "./summaryEngine.js";
 import * as storage from "./storageEngine.js";
+import { candidatePrintHtml, printRecord, fileStem } from "./printView.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 let language = "en";
 let record = null;
 let lastStatus = null;
+const variant = () => (document.body.dataset.variant === "production" ? "production" : "development");
+const titleKey = () => (variant() === "production" ? "productionPageTitle" : "candidatePageTitle");
 
-const ICE = [["NONE", "none"], ["POLAR", "POLAR"], ["ACCEPTABLE_ICE", "ACCEPTABLE_ICE"], ["POLAR_AND_ACCEPTABLE_ICE", "POLAR_AND_ACCEPTABLE_ICE"]];
 const TRANSFER = [["NONE", "none"], ["OIL_TRANSFER", "OIL_TRANSFER"], ["CHEMICAL_TRANSFER", "CHEMICAL_TRANSFER"], ["GAS_TRANSFER", "GAS_TRANSFER"]];
 const DPO = [["NONE", "none"], ["DP", "DP"], ["OFFSHORE", "OFFSHORE"], ["DP_AND_OFFSHORE", "DP_AND_OFFSHORE"]];
 const NUMERIC = new Set(["vessel.propulsionPowerKw", "vessel.grossTonnage", "service.watchHours", "dates.daysAtSeaEntered"]);
@@ -32,8 +45,9 @@ function getPath(obj, path) { return path.split(".").reduce((o, k) => o?.[k], ob
 function setPath(obj, path, value) {
   const keys = path.split(".");
   const last = keys.pop();
-  keys.reduce((o, k) => o[k], obj)[last] = value;
+  keys.reduce((o, k) => (o[k] && typeof o[k] === "object" ? o[k] : (o[k] = {})), obj)[last] = value;
 }
+const isNumericPath = (path) => NUMERIC.has(path) || path.endsWith(".days");
 
 function setStatus(key, kind = "status-success") {
   lastStatus = { key, kind };
@@ -47,7 +61,7 @@ function applyStaticText() {
     const v = TEXT[language][el.dataset.i18n];
     if (v !== undefined) el.innerHTML = v;
   });
-  document.title = t(language, "candidatePageTitle");
+  document.title = t(language, titleKey());
 }
 
 function populateCertificates() {
@@ -81,7 +95,7 @@ function rowHtml(v, i) {
     <td><select data-path="service.watchHours">
         <option value="8"${Number(watch) !== 12 ? " selected" : ""}>8</option>
         <option value="12"${Number(watch) === 12 ? " selected" : ""}>12</option></select></td>
-    <td><select data-path="specializedService.iceService">${keyOptions(ICE, v.specializedService.iceService)}</select></td>
+    <td class="iceCell">${iceCellHtml(v)}</td>
     <td class="center"><input type="checkbox" data-path="specializedService.passengerService"${v.specializedService.passengerService ? " checked" : ""}></td>
     <td><select data-path="specializedService.transferOperation">${keyOptions(TRANSFER, v.specializedService.transferOperation)}</select></td>
     <td class="center"><input type="checkbox" data-path="specializedService.fishingService"${v.specializedService.fishingService ? " checked" : ""}></td>
@@ -94,11 +108,35 @@ function rowHtml(v, i) {
     <td><button type="button" class="deleteBtn">${esc(t(language, "deleteLine"))}</button></td>`;
 }
 
+/**
+ * Column K (v0.7.0): the ice conditions may be combined; each selected condition
+ * has its own number of days. Typing days ticks the condition; unticking clears the days.
+ */
+function iceCellHtml(v) {
+  const c = v.specializedService.iceConditions || {};
+  return ENUMS.iceConditions.map((code) => {
+    const item = c[code] || { selected: false, days: null };
+    return `<div class="iceOption" data-ice="${code}">
+      <label><input type="checkbox" data-path="specializedService.iceConditions.${code}.selected"${item.selected ? " checked" : ""}> ${esc(t(language, code))}</label>
+      <input type="number" min="0" step="1" inputmode="numeric" class="iceDays" data-path="specializedService.iceConditions.${code}.days"
+        value="${item.days ?? ""}" aria-label="${esc(t(language, code))} — ${esc(t(language, "iceDaysLabel"))}" placeholder="${esc(t(language, "iceDaysLabel"))}"></div>`;
+  }).join("");
+}
+
+function linkIceInputs(target) {
+  const box = target?.closest?.(".iceOption");
+  if (!box) return;
+  const check = box.querySelector("input[type=checkbox]");
+  const days = box.querySelector(".iceDays");
+  if (target === days && Number(days.value) > 0) check.checked = true;
+  if (target === check && !check.checked) days.value = "";
+}
+
 function readRow(row, v) {
   row.querySelectorAll("[data-path]").forEach((el) => {
     const path = el.dataset.path;
     let value = el.type === "checkbox" ? el.checked : el.value;
-    if (NUMERIC.has(path)) value = toNumberOrNull(value);
+    if (isNumericPath(path)) value = toNumberOrNull(value);
     else if (path.startsWith("dates.") && value === "") value = null;
     setPath(v, path, value);
   });
@@ -137,6 +175,8 @@ function refresh() {
   $("sumNotCalculated").textContent = ac.recordsNotCalculated;
   $("sumOverlap").textContent = ac.overlapDays;
   $("sumJuniorExcess").textContent = ac.juniorOfficerExcessDays;
+  $("sumPolarDays").textContent = s.specializedService.polarDays;
+  $("sumIceDays").textContent = s.specializedService.acceptableIceDays;
 
   const items = [];
   record.voyages.forEach((v, i) => {
@@ -173,7 +213,7 @@ function render() {
     const row = document.createElement("tr");
     row.dataset.index = i;
     row.innerHTML = rowHtml(v, i);
-    const onChange = () => { readRow(row, record.voyages[Number(row.dataset.index)]); refresh(); };
+    const onChange = (e) => { linkIceInputs(e?.target); readRow(row, record.voyages[Number(row.dataset.index)]); refresh(); };
     row.addEventListener("input", onChange);
     row.addEventListener("change", onChange);
     row.querySelector(".deleteBtn").addEventListener("click", () => {
@@ -219,11 +259,41 @@ function exportJson() {
   const blob = new Blob([storage.exportRecord(record)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `SeaServiceRecord-${record.candidate.cdnNumber || record.recordId}.json`;
+  a.download = `${fileStem(record)}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function fillPrintView() {
+  if (!record) return;
+  collectHeader();
+  refresh();
+  $("printView").innerHTML = candidatePrintHtml(record, record.calculationSummary, language, t(language, titleKey()));
+}
+
+function exportPdf() {
+  fillPrintView();
+  setStatus("pdfHint", "status-success");
+  printRecord($("printView").innerHTML, fileStem(record));
+}
+
+async function importJson(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    record = storage.importRecord(await file.text());
+    language = record.language === "fr" ? "fr" : language;
+    $("langSelector").value = language;
+    document.documentElement.lang = language;
+    lastStatus = { key: "imported", kind: "status-success" };
+    render();
+  } catch (err) {
+    console.error(err);
+    setStatus("importError", "status-error");
+  }
+  e.target.value = "";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -250,7 +320,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("btnSave").addEventListener("click", save);
   $("btnExport").addEventListener("click", exportJson);
-  $("btnPrint").addEventListener("click", () => window.print());
+  $("btnPrint").addEventListener("click", exportPdf);
+  $("fileImport").addEventListener("change", importJson);
+  window.addEventListener("beforeprint", fillPrintView);
   $("btnNew").addEventListener("click", () => {
     if (!window.confirm(t(language, "confirmNew"))) return;
     record = createSeaServiceRecord(language);

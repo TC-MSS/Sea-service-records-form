@@ -1,130 +1,133 @@
-# Dependency Inventory — Sea Service Records Form
+# Dependency Inventory — Sea Service Records Form v0.7.0
 
-Repository snapshot: `Sea-service-records-form-main` (uploaded 2026-11-24), 25 files.
+Repository snapshot: `Sea-service-records-form-main` (main after v0.6.0-dev.1, downloaded 2026-11-25) plus the v0.7.0 package.
 Generated with `dev/tools/check-deps.mjs` and `dev/tools/check-syntax.mjs`, then reviewed by hand.
+Result: **all local references resolve; no missing targets.**
 
-## 1. Production reference graph (unchanged by this package)
+## 1. What changed in the structure
+
+From v0.7.0 the **production candidate page uses the shared modules in `dev/js` and `dev/css`**. The rules live in one file, `dev/js/tp2293Engine.js`, and the candidate page and the examiner page both use it. `dev/` is therefore **production runtime**: do not delete or rename `dev/js` or `dev/css`. (A later release can move them to a neutral folder such as `js/core/`. This one does not, because moving files through the GitHub web upload means deleting each old file by hand.)
+
+The production page no longer loads `js/seaServiceCalculator.js`, `js/certificateRules.js`, `js/validationEngine.js` or `js/storageEngine.js`. Nothing else references them, so they can be deleted (§5).
+
+## 2. Production reference graph (v0.7.0)
 
 ```
-index.html                         (production candidate form — WORKING)
- ├─ css/app.css                    [link]   ACTIVE
- ├─ js/certificateRules.js         [script] loaded; functions never called by app.js
- ├─ js/validationEngine.js         [script] loaded; functions never called by app.js
- ├─ js/storageEngine.js            [script] loaded; functions never called (would throw if called)
- └─ js/app.js                      [module] ACTIVE
-     └─ js/seaServiceCalculator.js [import] ACTIVE (buildSummary)
+index.html                          (production candidate form — standards mode, no quirks)
+ ├─ css/app.css                     [link]
+ ├─ dev/css/examiner.css            [link]   summary cards, banners, print view
+ ├─ dev/css/candidate.css           [link]   table, column K, unvetted label
+ └─ js/app.js                       [module] production entry (one import)
+     └─ dev/js/candidate.js         [import] form controller (data-variant="production")
+         ├─ examinerI18n.js, referenceData.js, dataModel.js
+         ├─ calculationEngine.js ─ tp2293Engine.js, dataModel.js
+         ├─ validationEngine.js ─ dataModel.js
+         ├─ summaryEngine.js ─ dataModel.js, tp2293Engine.js, validationEngine.js
+         ├─ storageEngine.js ─ migrationEngine.js ─ dataModel.js, calculationEngine.js
+         └─ printView.js ─ examinerI18n.js, referenceData.js, dataModel.js
 
-examiner.html                      (production stub, 97 bytes — "Examiner Portal" heading only)
- └─ js/examiner-labels.js          [script] ACTIVE (runtime text replacement)
+examiner.html                       (production stub — unchanged)
+ └─ js/examiner-labels.js           [script]
 
-records.html                       (0 bytes — no references in or out)
+records.html                        (0 bytes — unchanged, unreferenced)
 ```
 
-No `fetch()` calls exist, so nothing in `data/` is loaded at runtime. No test files existed in the repository.
+## 3. Development reference graph (v0.7.0)
 
-## 2. File-by-file inventory
+```
+dev/index.html  (candidate, data-variant="development")    dev/examiner.html
+ ├─ ../css/app.css                                          ├─ ../css/app.css
+ ├─ css/examiner.css, css/candidate.css                     ├─ css/examiner.css
+ └─ js/candidate.js  (same tree as production above)        └─ js/examiner.js
+                                                                 ├─ examinerI18n.js, referenceData.js
+                                                                 ├─ examinerReview.js ─ calculationEngine.js, validationEngine.js
+                                                                 ├─ validationEngine.js, summaryEngine.js
+                                                                 ├─ calculationEngine.js ─ tp2293Engine.js, dataModel.js
+                                                                 ├─ tp2293Engine.js
+                                                                 ├─ printView.js
+                                                                 └─ storageEngine.js ─ migrationEngine.js
 
-| File | Type | Referenced by | Status | Notes |
-|---|---|---|---|---|
-| index.html | HTML | entry page | **Runtime — retain** | Candidate form. Comment before `<!DOCTYPE html>` forces quirks mode. |
-| examiner.html | HTML | entry page | **Retain** (stub) | Replaced functionally by `dev/examiner.html`; keep until the dev page is promoted. |
-| records.html | HTML | — | **Unreferenced, empty** | 0 bytes. |
-| css/app.css | CSS | index.html, dev/examiner.html | **Runtime — retain** | Shared by production and the dev page (dev reads it, never modifies it). |
-| js/app.js | JS module | index.html | **Runtime — retain** | Candidate UI, saves schema 0.4.0 under `SeaServiceRecord`. |
-| js/seaServiceCalculator.js | JS module | js/app.js | **Runtime — retain** | Summary figures on index.html. See defects §4. |
-| js/certificateRules.js | JS classic | index.html | **Retain** (loaded, inert) | Required by js/validationEngine.js. Removing it without editing index.html causes a 404. |
-| js/validationEngine.js | JS classic | index.html | **Retain** (loaded, inert) | Certificate eligibility (Phase 3). Name collides with the v0.5 module — the v0.5 version lives in `dev/js/`. |
-| js/storageEngine.js | JS classic | index.html | **Retain** (loaded, inert) | Calls `buildRecordObject()`, which is module-scoped in app.js → ReferenceError if ever called. Superseded by app.js save logic. |
-| js/examiner-labels.js | JS classic | examiner.html | **Retain** until examiner.html is replaced | Text-replacement shim; not needed by dev/examiner.html (labels are authored directly). |
-| js/translations.js | JS classic | — | **Unreferenced** | One-line comment stub (`// translations module`). |
-| js/tp2293Calculation.js | JS module | — | **Unreferenced, duplicate** | Duplicates `SeaServiceCalculator.calculateQualifyingDays` (watch-factor table). |
-| js/voyageAssessmentEngine.js | JS module | — | **Unreferenced, obsolete** | Expects `"Unlimited"`/`"Sheltered Waters"`; app.js stores `UNLIMITED`/`SHELTERED`, and reads `record.voyage` which app.js never sets. |
-| js/1dataModel.js | JS module | — | **Unreferenced — packageV0.5 source** | Integrated (revised) as `dev/js/dataModel.js`. |
-| js/1calculationEngine.js | JS module | — | packageV0.5 source | → `dev/js/calculationEngine.js` |
-| js/1migrationEngine.js | JS module | — | packageV0.5 source | → `dev/js/migrationEngine.js` (imports `./dataModel.js` — broken under the `1` prefix) |
-| js/1validationEngine.js | JS module | — | packageV0.5 source | → `dev/js/validationEngine.js` |
-| js/1storageEngine.js | JS module | — | packageV0.5 source | → `dev/js/storageEngine.js` |
-| js/1summaryEngine.js | JS module | — | packageV0.5 source | → `dev/js/summaryEngine.js` |
-| js/1examinerReview.js | JS module | — | packageV0.5 source | → `dev/js/examinerReview.js` + `dev/js/examinerI18n.js` |
-| data/certificates.json | JSON | — | **Unreferenced placeholder** | 2 entries; app.js has its own hard-coded list. |
-| data/vesselThresholds.json | JSON | — | **Unreferenced placeholder** | |
-| data/voyages.json | JSON | — | **Unreferenced placeholder** | |
-| README.md | Doc | — | Retain | One line (GitHub Pages note). |
-| Project_status.md | Doc | — | Retain | Phase plan. |
+dev/tests/model.test.mjs, tp2293.test.mjs → dev/js/* + tests/fixtures/*.json  (Node test runner)
+dev/tests/smoke.mjs → serves the repo root; loads index.html, dev/examiner.html, dev/index.html (Playwright)
+```
 
-## 3. Duplicates
+No `fetch()` calls: nothing in `data/` is loaded at runtime. No external (CDN) scripts.
 
-| Duplicate set | Resolution |
-|---|---|
-| `js/validationEngine.js` (classic, certificate rules) vs `js/1validationEngine.js` (v0.5 module) | Different purposes, same intended filename. v0.5 version lives in `dev/js/`. |
-| `js/storageEngine.js` (classic, broken) vs `js/1storageEngine.js` (v0.5) | v0.5 version lives in `dev/js/`. Classic one is dead code. |
-| `js/tp2293Calculation.js` vs `SeaServiceCalculator.calculateQualifyingDays` | Same watch-factor table twice. Keep one when TP 2293 work starts (Phase 6). |
-| `js/examiner-labels.js` text replacement vs `EXAMINER_LABELS` in `js/1examinerReview.js` | Superseded by `dev/js/examinerI18n.js`. |
-| Certificate list: static `<option>`s in index.html vs `certificates` array in app.js vs data/certificates.json | app.js overwrites the static options at start-up, so the static list (incl. STCW endorsements) is never shown. |
-| `js/1*.js` vs `dev/js/*.js` | After this package is merged, the `1`-prefixed copies are redundant. |
+## 4. File-by-file inventory
 
-## 4. Pre-existing production defects found (not changed — production is frozen)
+| File | Referenced by | Status v0.7.0 | Notes |
+|---|---|---|---|
+| index.html | entry page | **Runtime — changed** | New candidate form on the shared engine. Comment before `<!DOCTYPE html>` removed (quirks-mode defect fixed). |
+| js/app.js | index.html | **Runtime — changed** | One-line entry: `import "../dev/js/candidate.js"`. |
+| css/app.css | index.html, dev pages | Runtime — unchanged | |
+| examiner.html | entry page | Retain (stub) — unchanged | Replaced functionally by `dev/examiner.html`. |
+| js/examiner-labels.js | examiner.html | Retain — unchanged | Until `examiner.html` is replaced. |
+| records.html | — | Unreferenced, empty | |
+| js/seaServiceCalculator.js | — | **Retired — safe to delete** | No longer imported. Replaced by `dev/js/tp2293Engine.js` + `summaryEngine.js`. |
+| js/certificateRules.js | — | **Safe to delete** | Was loaded by the old index.html only. |
+| js/validationEngine.js | — | **Safe to delete** | Was loaded by the old index.html only (certificate rules, never called). |
+| js/storageEngine.js | — | **Safe to delete** | Was loaded by the old index.html only; would have thrown if called. |
+| js/translations.js | — | Safe to delete | Comment-only stub. |
+| js/tp2293Calculation.js | — | Safe to delete | Duplicate of the old watch-factor table. |
+| js/voyageAssessmentEngine.js | — | Safe to delete | Obsolete, incompatible codes. |
+| js/1*.js (7 files) | — | Safe to delete | packageV0.5 sources, integrated in `dev/js`. |
+| data/*.json (3 files) | — | Optional | Placeholders. |
+| dev/js/candidate.js | index.html (via js/app.js), dev/index.html | **Runtime (production + dev) — changed** | Shared controller; `<body data-variant>` selects the title. Column K, unvetted label, Import JSON, Export PDF. |
+| dev/js/tp2293Engine.js | calculationEngine, summaryEngine, examiner.js | **Runtime — unchanged** | Single source of truth for the rules. |
+| dev/js/calculationEngine.js | candidate, examiner, migration | Runtime — changed | Column K sync; reference value; counted figure. |
+| dev/js/dataModel.js | most modules | Runtime — changed | App version 0.7.0; `iceConditions`; examiner `referenceDays`, `effectiveAcceptedDays`, `statusSetAutomatically`. |
+| dev/js/validationEngine.js | candidate, examiner, summary | Runtime — changed | Ice checks; examiner checks are warnings (never block). |
+| dev/js/summaryEngine.js | candidate, examiner | Runtime — changed | Counted figure, difference, ice totals. |
+| dev/js/examinerReview.js | examiner.js | Runtime — changed | Automatic status (4(d)). |
+| dev/js/migrationEngine.js | storageEngine | Runtime — changed | Older ice code → conditions. |
+| dev/js/storageEngine.js | candidate, examiner | Runtime — changed (comments only) | Keys unchanged. |
+| dev/js/examinerI18n.js | candidate, examiner, printView | Runtime — changed | New EN/FR text. |
+| dev/js/printView.js | candidate, examiner | **Runtime — new** | Read-only copy for Export PDF / Print. |
+| dev/js/examiner.js | dev/examiner.html | Dev — changed | Items 2, 3, 4; PDF. |
+| dev/js/referenceData.js | candidate, examiner, printView | Runtime — unchanged | |
+| dev/css/examiner.css, dev/css/candidate.css | production and dev pages | **Runtime — changed** | |
+| dev/index.html, dev/examiner.html | entry pages | Dev — changed | |
+| dev/tests/*, dev/tools/*, dev/package.json, dev/README-DEV.md, dev/docs/* | Node / docs | Retain | |
 
-1. `index.html` / `examiner.html` / `records.html`: content before `<!DOCTYPE html>` (or empty) → quirks mode.
-2. `seaServiceCalculator.calculateOnboardDays` is **exclusive** (end − start) while app.js column R is **inclusive** (+1). Summary "Submitted days" is therefore 1 day lower per voyage than column R.
-3. `seaServiceCalculator` looks for `captain`, `chief officer`, `officer` and `near` in lower-cased codes; app.js stores `MASTER`, `CHIEF_MATE`, `MATE`, `NC1`, `NC2`. Capacity and near-coastal breakdowns stay at 0 (except `ENGINEER_OFFICER`, which matches "officer").
-4. `seaServiceCalculator` reads `polarWaters`, `iceNavigation`, `oilTanker`, `chemicalTanker`, `lngTanker`; app.js sends `oilTransfer`, `chemicalTransfer`, `gasTransfer`. Oil/chemical/gas totals stay at 0. Passenger, fishing, DP and offshore totals are never calculated.
-5. index.html "Examiner Validation" checkboxes have no `id`/`name` and are not saved.
-6. `js/storageEngine.js` would throw if called (see §2).
+## 5. Files safe to delete (after v0.7.0 is merged and verified)
 
-These are recorded for the next phases; the dev package does not depend on any of them.
+Verified by `check-deps.mjs` (listed as unreferenced) and by the smoke test, which checks that the production page does not request them:
 
-## 5. Files safe to delete
-
-Safe now (no runtime reference; verified by `check-deps.mjs` and smoke tests):
-
-- `records.html` (empty)
-- `js/translations.js` (comment-only stub)
-- `js/voyageAssessmentEngine.js` (obsolete, incompatible codes)
-- `js/tp2293Calculation.js` (duplicate logic — archive in a branch if you want it for Phase 6 reference)
-
-Safe **after** `dev/` is merged into the repository:
-
+- `js/seaServiceCalculator.js`
+- `js/certificateRules.js`, `js/validationEngine.js`, `js/storageEngine.js`
+- `js/translations.js`, `js/tp2293Calculation.js`, `js/voyageAssessmentEngine.js`
 - `js/1calculationEngine.js`, `js/1dataModel.js`, `js/1examinerReview.js`, `js/1migrationEngine.js`, `js/1storageEngine.js`, `js/1summaryEngine.js`, `js/1validationEngine.js`
+- `records.html` (empty)
 
-Optional (placeholders; delete or populate when reference data moves out of app.js):
+Optional: `data/certificates.json`, `data/vesselThresholds.json`, `data/voyages.json`.
 
-- `data/certificates.json`, `data/vesselThresholds.json`, `data/voyages.json`
+Delete them in a **separate** pull request (INSTALL.md, step 10), so the v0.7.0 change can be undone on its own.
 
 ## 6. Files that must be retained
 
-Production runtime (do not delete or rename):
+- `index.html`, `js/app.js`, `css/app.css`
+- **all of `dev/js/` and `dev/css/`** (production runtime from v0.7.0)
+- `dev/index.html`, `dev/examiner.html`
+- `examiner.html`, `js/examiner-labels.js` — until `dev/examiner.html` is promoted
+- `dev/tests/*`, `dev/tools/*`, `dev/package.json`, docs, `README.md`, `Project_status.md`
 
-- `index.html`, `css/app.css`, `js/app.js`, `js/seaServiceCalculator.js`
-- `js/certificateRules.js`, `js/validationEngine.js`, `js/storageEngine.js` — referenced by `<script>` tags in index.html; removing them causes 404s. Remove only together with an index.html edit.
-- `examiner.html`, `js/examiner-labels.js` — until `dev/examiner.html` is promoted.
-- `README.md`, `Project_status.md`
+## 7. Browser storage keys
 
-Development package (new):
+| Key | Schema | Written by | Read by |
+|---|---|---|---|
+| `SeaServiceRecord` | 0.4.0 | production page **before** v0.7.0 | all v0.7.0 pages, read-only (converted in memory) |
+| `SeaServiceRecord.v0.5.0.candidate` | 0.5.0 | production `index.html` (from v0.7.0), `dev/index.html` | both candidate pages; examiner "Load candidate record" (checked first) |
+| `SeaServiceRecord.v0.5.0` | 0.5.0 | `dev/examiner.html` (draft) | `dev/examiner.html` |
 
-- `dev/examiner.html`, `dev/css/examiner.css`
-- `dev/js/dataModel.js`, `calculationEngine.js`, `migrationEngine.js`, `validationEngine.js`, `summaryEngine.js`, `storageEngine.js`, `examinerReview.js`, `examinerI18n.js`, `referenceData.js`, `examiner.js`
-- `dev/tests/*`, `dev/tools/*`, `dev/package.json`, `dev/README-DEV.md`, `dev/docs/*`
+Every record stays in the browser where it was saved. Records move between people only as exported JSON files (candidate → e-mail → examiner **Import JSON**).
 
-## 7. Development package reference graph (v0.6.0-dev.1)
+## 8. Production defects from the v0.6.0 list (§4 of the previous inventory)
 
-```
-dev/index.html  (candidate form)                 dev/examiner.html
- ├─ ../css/app.css  (shared, read-only)           ├─ ../css/app.css
- ├─ css/examiner.css                              ├─ css/examiner.css
- ├─ css/candidate.css                             └─ js/examiner.js
- └─ js/candidate.js                                    ├─ examinerI18n.js, referenceData.js
-      ├─ examinerI18n.js, referenceData.js             ├─ examinerReview.js ─ calculationEngine.js, validationEngine.js
-      ├─ dataModel.js                                  ├─ validationEngine.js ─ dataModel.js
-      ├─ calculationEngine.js ─ tp2293Engine.js        ├─ summaryEngine.js ─ dataModel.js, tp2293Engine.js
-      ├─ validationEngine.js                           ├─ calculationEngine.js ─ tp2293Engine.js
-      ├─ summaryEngine.js                              ├─ tp2293Engine.js
-      └─ storageEngine.js ─ migrationEngine.js         └─ storageEngine.js ─ migrationEngine.js ─ dataModel.js, calculationEngine.js
-
-dev/tests/model.test.mjs, tp2293.test.mjs → dev/js/* + tests/fixtures/*.json  (Node test runner)
-dev/tests/smoke.mjs → serves the repo root; loads index.html, dev/index.html, dev/examiner.html (Playwright)
-```
-
-New files that must be retained with the dev package: `dev/index.html`, `dev/css/candidate.css`, `dev/js/candidate.js`, `dev/js/tp2293Engine.js`, `dev/tests/tp2293.test.mjs`, `dev/docs/CALCULATION_RULES.md`.
-
-`js/tp2293Calculation.js` and the watch table in `js/seaServiceCalculator.js` are now superseded by `dev/js/tp2293Engine.js`. The production calculator stays in place until the production candidate form is replaced.
+| # | Defect | v0.7.0 |
+|---|---|---|
+| 1 | Content before `<!DOCTYPE html>` → quirks mode | **Fixed in index.html.** `examiner.html` and `records.html` unchanged. |
+| 2 | Calculator exclusive vs. column R inclusive | **Fixed** — one TP 2293 count everywhere. |
+| 3 | Capacity codes never matched | **Removed** — old breakdown section removed. |
+| 4 | Specialized totals always 0 | **Removed**; ice days now totalled from column K. |
+| 5 | "Examiner Validation" checkboxes not saved | **Removed** from the candidate page (examiner checks are on `dev/examiner.html`). |
+| 6 | `js/storageEngine.js` would throw | No longer loaded — safe to delete. |
