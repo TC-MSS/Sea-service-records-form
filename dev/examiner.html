@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sea Service Records — Examiner Review (development v0.6.0)</title>
+<title>Sea Service Records — Examiner Review (development v0.7.0)</title>
 <link rel="stylesheet" href="../css/app.css">
 <link rel="stylesheet" href="css/examiner.css">
 </head>
 <body>
 
 <header class="banner">
-  <h1 data-i18n="pageTitle">Sea Service Records — Examiner Review (development v0.6.0)</h1>
+  <h1 data-i18n="pageTitle">Sea Service Records — Examiner Review (development v0.7.0)</h1>
   <select id="langSelector" aria-label="Language / Langue">
     <option value="en">English</option>
     <option value="fr">Français</option>
@@ -29,7 +29,7 @@
     </label>
     <button type="button" id="btnSave" data-i18n="saveDraft">Save examiner draft</button>
     <button type="button" id="btnExport" data-i18n="exportJson">Export JSON</button>
-    <button type="button" id="btnPrint" data-i18n="print">Print</button>
+    <button type="button" id="btnPrint" data-i18n="exportPdf">Export PDF / Print</button>
   </div>
   <div id="statusPanel" role="status" aria-live="polite" data-i18n="noRecord">No record loaded. Load the candidate record saved in this browser or import a JSON file.</div>
 </section>
@@ -43,7 +43,6 @@
     <div><dt data-i18n="applicationDate">Application Date</dt><dd id="infoApplicationDate">—</dd></div>
     <div><dt data-i18n="certificateApplied">Certificate Applied For</dt><dd id="infoCertificate">—</dd></div>
     <div><dt data-i18n="certificateHeld">Certificate Held</dt><dd id="infoCertificateHeld">—</dd></div>
-    <div><dt data-i18n="recordStatus">Schema / record</dt><dd id="infoSchema">—</dd></div>
   </dl>
 </section>
 
@@ -97,20 +96,21 @@
           <option value="REJECTED" data-i18n="REJECTED">Rejected</option>
         </select>
       </label>
-      <label><span data-i18n="examinerBasis">Examiner basis</span>
+      <label><span data-i18n="examinerBasis">Examiner basis (optional)</span>
         <select data-field="examinerBasis">
-          <option value="NONE" data-i18n="select">Select</option>
+          <option value="NONE" data-i18n="basisNone">None — compare with converted days</option>
           <option value="DAYS_ON_BOARD" data-i18n="DAYS_ON_BOARD">Days on board</option>
           <option value="DAYS_AT_SEA" data-i18n="DAYS_AT_SEA">Days at sea</option>
           <option value="CONVERTED_DAYS" data-i18n="CONVERTED_DAYS">Converted days</option>
           <option value="MANUAL_DETERMINATION" data-i18n="MANUAL_DETERMINATION">Manual determination</option>
         </select>
       </label>
-      <div class="basisDaysBox"><span data-i18n="basisDays">Basis days</span><output class="basisDays">—</output></div>
+      <div class="basisDaysBox"><span data-i18n="referenceDays">Reference days</span><output class="basisDays">—</output></div>
       <label><span data-i18n="finalAcceptedDays">Final accepted days</span>
         <input type="number" min="0" step="1" inputmode="numeric" data-field="finalAcceptedDays">
       </label>
-      <label class="wide adjustmentLabel"><span class="adjustmentText" data-i18n="adjustmentReason">Adjustment reason</span>
+      <div class="countedBox"><span data-i18n="countedDays">Counted in total</span><output class="countedDays">0</output></div>
+      <label class="wide adjustmentLabel"><span><span class="adjustmentText" data-i18n="adjustmentReason">Adjustment reason</span><span class="reqTag" data-i18n="requiredTag">(required)</span></span>
         <textarea rows="2" data-field="adjustmentReason"></textarea>
       </label>
       <label class="wide"><span data-i18n="examinerComments">Examiner comments</span>
@@ -137,6 +137,8 @@
       <h3 data-i18n="candidateClaim">Candidate claim</h3>
       <div><span data-i18n="totalDaysOnBoard">Total days on board</span>: <strong id="sumDaysOnBoard">0</strong></div>
       <div><span data-i18n="totalDaysAtSea">Total days at sea</span>: <strong id="sumDaysAtSea">0</strong></div>
+      <div><span data-i18n="polarDays">Polar waters (days entered)</span>: <span id="sumPolarDays">0</span></div>
+      <div><span data-i18n="acceptableIceDays">Acceptable ice service (days entered)</span>: <span id="sumIceDays">0</span></div>
     </div>
     <div class="summaryCard">
       <h3 data-i18n="automatedCalculation">Automated calculation</h3>
@@ -150,6 +152,9 @@
     <div class="summaryCard">
       <h3 data-i18n="examinerDetermination">Examiner determination</h3>
       <div><span data-i18n="totalFinalAcceptedDays">Total final accepted days</span>: <strong id="sumFinalAcceptedDays">0</strong> <span id="sumFinalAcceptedMonths"></span></div>
+      <div><span data-i18n="differenceFromConverted">Difference from total converted days</span>: <strong id="sumDifference">—</strong></div>
+      <div><span data-i18n="linesWithFinalDays">Lines with final accepted days</span>: <span id="sumFinalLines">0</span></div>
+      <div><span data-i18n="linesMissingReason">Lines missing an adjustment reason</span>: <span id="sumMissingReason">0</span></div>
       <div><span data-i18n="recordsReviewed">Lines reviewed</span>: <span id="sumReviewed">0</span></div>
       <div><span data-i18n="recordsNotReviewed">Lines not reviewed</span>: <span id="sumNotReviewed">0</span></div>
       <div><span data-i18n="recordsAccepted">Accepted</span>: <span id="sumAccepted">0</span></div>
@@ -159,8 +164,11 @@
       <div><span data-i18n="outstandingIssues">Lines with errors</span>: <span id="sumErrors">0</span></div>
     </div>
   </div>
-  <p class="note" data-i18n="summaryNote">Final accepted days count only lines marked Accepted or Accepted with adjustment.</p>
+  <p class="note" data-i18n="summaryNote">Total final accepted days: the examiner’s final accepted days on each line override days on board, days at sea and converted days.</p>
 </section>
+
+<!-- Read-only copy built for "Export PDF / Print" (js/printView.js); hidden on screen. -->
+<div id="printView" class="printView" aria-hidden="true"></div>
 
 <script type="module" src="js/examiner.js"></script>
 </body>

@@ -40,7 +40,7 @@ const browser = await chromium.launch();
 const results = [];
 async function step(name, fn) {
   try { await fn(); results.push(["PASS", name]); }
-  catch (e) { results.push(["FAIL", name, e.message.split("\n")[0]]); }
+  catch (e) { results.push(["FAIL", name, e.message.split("\n").slice(0, 6).join(" ")]); }
 }
 
 const context = await browser.newContext();
@@ -51,34 +51,123 @@ page.on("pageerror", (e) => pageErrors.push(e.message));
 page.on("response", (r) => { if (r.status() === 404) notFound.push(r.url()); });
 page.on("dialog", (d) => d.accept());
 
-// ---------- Production regression (read-only, nothing modified) ----------
-await step("production index.html loads without script errors or 404s", async () => {
+// ---------- Production candidate page (v0.7.0: shared TP 2293 engine) ----------
+const CANDIDATE_KEY = "SeaServiceRecord.v0.5.0.candidate";
+const requested = [];
+page.on("request", (r) => requested.push(r.url()));
+
+await step("production index.html loads without script errors or 404s; old calculator not loaded", async () => {
   await page.goto(`${base}/index.html`);
-  await page.waitForSelector("#recordsBody tr");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForFunction(() => window.__candidateDev?.getRecord());
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(notFound, []);
+  assert.ok(requested.some((u) => u.endsWith("/dev/js/tp2293Engine.js")), "shared engine loaded");
+  for (const old of ["seaServiceCalculator.js", "certificateRules.js", "/js/validationEngine.js", "/js/storageEngine.js"]) {
+    assert.ok(!requested.some((u) => u.endsWith(old) && !u.includes("/dev/")), `${old} must not be loaded`);
+  }
+  assert.equal(await page.evaluate(() => document.compatMode), "CSS1Compat", "standards mode (no quirks)");
 });
-await step("production form label reads 'Given Name' / 'Prénom'", async () => {
+await step("production label 'Given Name' / 'Prénom'; title has no 'development'", async () => {
   assert.equal((await page.textContent("label[data-i18n=givenNames]")).trim(), "Given Name");
+  assert.equal(await page.title(), "Statement of Sea Service for a Certificate");
   await page.selectOption("#langSelector", "fr");
   assert.equal((await page.textContent("label[data-i18n=givenNames]")).trim(), "Prénom");
+  assert.equal(await page.title(), "État de service en mer pour un brevet");
   await page.selectOption("#langSelector", "en");
 });
-await step("production candidate form saves a 0.4.0 record under 'SeaServiceRecord'", async () => {
-  const row = page.locator("#recordsBody tr").first();
-  await row.locator(".rank").selectOption("MATE");
-  await row.locator(".vessel").fill("Smoke Vessel");
-  await row.locator(".gt").fill("600");
-  await row.locator(".embark").fill("2025-01-01");
-  await row.locator(".disembark").fill("2025-01-20");
-  await row.locator(".daysAtSea").fill("15");
-  await row.locator(".daysAtSea").dispatchEvent("change");
-  assert.equal(await row.locator(".daysOnBoardCell").textContent(), "20");
-  await page.click("button[data-i18n=save]");
-  const saved = JSON.parse(await page.evaluate(() => localStorage.getItem("SeaServiceRecord")));
-  assert.equal(saved.schemaVersion, "0.4.0");
-  assert.equal(saved.voyages[0].daysAtSea, 15);
+await step("production shows the UNVETTED label in English and French", async () => {
+  const boxes = await page.$$eval(".unvettedBox", (bs) => bs.map((b) => b.textContent.replace(/\s+/g, " ").trim()));
+  assert.equal(boxes.length, 2);
+  for (const b of boxes) {
+    assert.match(b, /Unvetted sea service — subject to examiner review/);
+    assert.match(b, /Service en mer non vérifié — sous réserve de l’examen par l’examinateur/);
+  }
+  const headers = await page.$$eval("#serviceTable thead th", (ths) => ths.map((t) => t.textContent.replace(/\s+/g, " ").trim()));
+  const s = headers.findIndex((h) => h.includes("Days at sea, if different"));
+  assert.match(headers[s + 1], /Converted days \(unvetted\)$/);
+  assert.equal(await page.locator("text=Examiner Validation").count(), 0, "examiner-only section removed");
 });
+await step("production loads the 0.4.0 record saved before this release (R per TP 2293 s. 3.3(4))", async () => {
+  await page.evaluate((f) => { localStorage.setItem("SeaServiceRecord", JSON.stringify(f)); }, fixture);
+  await page.reload();
+  await page.waitForFunction(() => window.__candidateDev?.getRecord()?.candidate.surname === "Tremblay");
+  const r = await page.$$eval("td[data-col=daysOnBoard]", (tds) => tds.map((t) => t.textContent.trim()));
+  assert.deepEqual(r, ["30", "39", "29"]);
+  const tcol = await page.$$eval("td[data-col=convertedDays]", (tds) => tds.map((t) => t.textContent.trim()));
+  assert.deepEqual(tcol, ["30", "56", "43"], "same figures as the examiner page");
+  const title = await page.getAttribute("#recordsBody tr:nth-child(2) td[data-col=convertedDays] span", "title");
+  assert.match(title, /2\.25/);
+  assert.equal(await page.locator("#findings li.explain").count(), 3, "explanation line per line under the table");
+  assert.equal(await page.textContent("#sumDaysOnBoard"), "98");
+  assert.equal(await page.textContent("#sumDaysAtSea"), "84");
+  assert.equal(await page.textContent("#sumConvertedDays"), "129");
+  assert.equal(await page.textContent("#sumConvertedMonths"), "(4.3 months)");
+  assert.equal(await page.textContent("#sumManual"), "0");
+  assert.equal(await page.textContent("#sumOverlap"), "0");
+});
+await step("production column K: several ice conditions with days", async () => {
+  const r2 = "#recordsBody tr:nth-child(2)";
+  assert.equal(await page.isChecked(`${r2} [data-path='specializedService.iceConditions.POLAR.selected']`), true, "legacy POLAR kept");
+  await page.fill(`${r2} [data-path='specializedService.iceConditions.POLAR.days']`, "12");
+  await page.fill(`${r2} [data-path='specializedService.iceConditions.ACCEPTABLE_ICE.days']`, "20");
+  assert.equal(await page.isChecked(`${r2} [data-path='specializedService.iceConditions.ACCEPTABLE_ICE.selected']`), true, "days tick the condition");
+  assert.equal(await page.textContent("#sumPolarDays"), "12");
+  assert.equal(await page.textContent("#sumIceDays"), "20");
+  await page.fill(`${r2} [data-path='specializedService.iceConditions.ACCEPTABLE_ICE.days']`, "45");
+  const codes = await page.$$eval("#findings li.error", (ls) => ls.map((l) => l.dataset.code));
+  assert.ok(codes.includes("ICE_DAYS_EXCEED_ONBOARD"));
+  await page.fill(`${r2} [data-path='specializedService.iceConditions.ACCEPTABLE_ICE.days']`, "20");
+  const rec = await page.evaluate(() => window.__candidateDev.getRecord());
+  assert.equal(rec.voyages[1].specializedService.iceService, "POLAR_AND_ACCEPTABLE_ICE");
+});
+await step("production save: 0.5.0 under the candidate key; old 'SeaServiceRecord' never overwritten", async () => {
+  const before = await page.evaluate(() => localStorage.getItem("SeaServiceRecord"));
+  await page.click("#btnSave");
+  const saved = JSON.parse(await page.evaluate((k) => localStorage.getItem(k), CANDIDATE_KEY));
+  assert.equal(await page.evaluate(() => localStorage.getItem("SeaServiceRecord")), before);
+  assert.equal(saved.schemaVersion, "0.5.0");
+  assert.equal(saved.applicationVersion, "0.7.0");
+  assert.deepEqual(saved.voyages.map((v) => v.calculation.convertedDays), [30, 56, 43]);
+  assert.deepEqual(saved.voyages[1].specializedService.iceConditions, { POLAR: { selected: true, days: 12 }, ACCEPTABLE_ICE: { selected: true, days: 20 } });
+  await page.reload();
+  await page.waitForFunction(() => window.__candidateDev?.getRecord());
+  assert.equal(await page.inputValue("#recordsBody tr:nth-child(2) [data-path='specializedService.iceConditions.POLAR.days']"), "12");
+});
+await step("production Export JSON downloads the 0.5.0 file to e-mail", async () => {
+  const [download] = await Promise.all([page.waitForEvent("download"), page.click("#btnExport")]);
+  assert.match(download.suggestedFilename(), /^SeaServiceRecord-123456789-\d{4}-\d{2}-\d{2}\.json$/);
+  const json = JSON.parse(await readFile(await download.path(), "utf8"));
+  assert.equal(json.schemaVersion, "0.5.0");
+  assert.ok(json.recordId);
+});
+await step("production Import JSON re-opens a file (pre-0.4 file converted)", async () => {
+  await page.setInputFiles("#fileImport", preFixture);
+  await page.waitForFunction(() => window.__candidateDev.getRecord()?.candidate.surname === "Smith");
+  assert.match(await page.textContent("#statusPanel"), /imported/i);
+});
+await step("production loads a record saved by the v0.6.0 development candidate form", async () => {
+  const dev06 = { schemaVersion: "0.5.0", applicationVersion: "0.6.0-dev.1", recordId: "SSR-dev06", candidate: { surname: "Dev", givenNames: "Six" },
+    voyages: [{ service: { capacityCode: "MATE", watchHours: 12 }, dates: { embarkationDate: "2025-01-01", disembarkationDate: "2025-01-31" }, specializedService: { iceService: "ACCEPTABLE_ICE" } }] };
+  await page.evaluate(([k, r]) => localStorage.setItem(k, JSON.stringify(r)), [CANDIDATE_KEY, dev06]);
+  await page.reload();
+  await page.waitForFunction(() => window.__candidateDev.getRecord()?.recordId === "SSR-dev06");
+  assert.equal(await page.textContent("#recordsBody tr:nth-child(1) [data-col=convertedDays]"), "45");
+  assert.equal(await page.isChecked("#recordsBody tr:nth-child(1) [data-path='specializedService.iceConditions.ACCEPTABLE_ICE.selected']"), true);
+});
+await step("production Export PDF / Print: only the read-only copy prints, with the unvetted label", async () => {
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+  await page.emulateMedia({ media: "print" });
+  assert.equal(await page.isVisible("#printView"), true);
+  assert.equal(await page.isVisible("#serviceTable"), false);
+  const txt = await page.textContent("#printView");
+  assert.match(txt, /Unvetted sea service — subject to examiner review/);
+  assert.match(txt, /Acceptable ice service: \?/);
+  await page.emulateMedia({ media: "screen" });
+  assert.equal(await page.isVisible("#printView"), false);
+});
+await step("production: no uncaught script errors", async () => { assert.deepEqual(pageErrors, []); });
 
 // ---------- Development examiner page ----------
 await step("dev/examiner.html loads without script errors or 404s", async () => {
@@ -88,19 +177,28 @@ await step("dev/examiner.html loads without script errors or 404s", async () => 
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(notFound, []);
 });
-await step("end-to-end: examiner loads the record saved by production index.html", async () => {
+await step("end-to-end: examiner loads the record saved by production index.html (same converted days)", async () => {
   await page.click("#btnLoadCandidate");
   await page.waitForSelector("tr.voyageRow");
   const rec = await page.evaluate(() => window.__examinerDev.getRecord());
   assert.equal(rec.schemaVersion, "0.5.0");
-  assert.equal(rec.voyages[0].vessel.vesselName, "Smoke Vessel");
-  assert.equal(rec.voyages[0].dates.daysAtSeaEntered, 15);
-  assert.equal(rec.voyages[0].dates.daysOnBoard, 19, "TP 2293 3.3(4)");
-  assert.equal(rec.voyages[0].calculation.convertedDays, 19, "8 h: min(1.5 × 15, 19)");
+  assert.equal(rec.recordId, "SSR-dev06");
+  assert.equal(rec.voyages[0].calculation.convertedDays, 45);
+  assert.equal(await page.textContent("td[data-col=convertedDays]"), "45");
+});
+
+await step("examiner: 'Schema / record' not displayed; schemaVersion and recordId kept in the JSON", async () => {
+  assert.equal(await page.locator("#infoSchema").count(), 0);
+  const info = await page.textContent(".infoGrid");
+  assert.ok(!/Schema \/ record|Version \/ dossier/.test(info));
+  const [download] = await Promise.all([page.waitForEvent("download"), page.click("#btnExport")]);
+  const json = JSON.parse(await readFile(await download.path(), "utf8"));
+  assert.equal(json.schemaVersion, "0.5.0");
+  assert.equal(json.recordId, "SSR-dev06");
 });
 
 await step("load legacy 0.4.0 fixture from browser storage", async () => {
-  await page.evaluate((f) => { localStorage.setItem("SeaServiceRecord", JSON.stringify(f)); localStorage.removeItem("SeaServiceRecord.v0.5.0"); }, fixture);
+  await page.evaluate((f) => { localStorage.setItem("SeaServiceRecord", JSON.stringify(f)); localStorage.removeItem("SeaServiceRecord.v0.5.0"); localStorage.removeItem("SeaServiceRecord.v0.5.0.candidate"); }, fixture);
   await page.click("#btnLoadCandidate");
   await page.waitForFunction(() => document.querySelectorAll("tr.voyageRow").length === 3);
   const status = await page.textContent("#statusPanel");
@@ -138,17 +236,28 @@ await step("examiner controls exist on every line with the four basis options", 
   assert.deepEqual(opts, ["Days on board", "Days at sea", "Converted days", "Manual determination"]);
 });
 
-await step("adjustment reason is required when final days differ from basis", async () => {
+await step("adjustment reason: neutral '(required)' when needed, red only while empty (bug 3)", async () => {
+  const label = ".reviewRow[data-index='1'] .adjustmentLabel";
+  assert.equal(await page.isVisible(`${label} .reqTag`), false, "no indicator before a reason is needed");
   await page.selectOption("#reviewStatus-1", "ACCEPTED_WITH_ADJUSTMENT");
   await page.selectOption("#examinerBasis-1", "DAYS_AT_SEA");
-  assert.equal(await page.textContent(".reviewRow[data-index='1'] .basisDays"), "25");
+  assert.match(await page.textContent(".reviewRow[data-index='1'] .basisDays"), /^25/);
   await page.fill("#finalAcceptedDays-1", "20");
-  const codes = await page.$$eval(".reviewRow[data-index='1'] .messages li.error", (ls) => ls.map((l) => l.dataset.code));
-  assert.ok(codes.includes("ADJUSTMENT_REASON_REQUIRED"), codes.join());
+  let cls = await page.getAttribute(label, "class");
+  assert.match(cls, /\bneeded\b/); assert.match(cls, /\bmissing\b/);
+  assert.equal((await page.textContent(`${label} .reqTag`)).trim(), "(required)");
+  const codes = await page.$$eval(".reviewRow[data-index='1'] .messages li.warning.reasonMissing", (ls) => ls.map((l) => l.dataset.code));
+  assert.deepEqual(codes, ["ADJUSTMENT_REASON_REQUIRED"], "shown clearly as a warning");
+  assert.equal(await page.$$eval(".reviewRow[data-index='1'] .messages li.error", (ls) => ls.length), 0, "not an error");
   assert.equal(await page.getAttribute("#adjustmentReason-1", "aria-invalid"), "true");
+  assert.equal(await page.$eval("#adjustmentReason-1", (e) => getComputedStyle(e).borderTopColor), "rgb(176, 0, 32)");
+  await page.type("#adjustmentReason-1", "F");
+  cls = await page.getAttribute(label, "class");
+  assert.match(cls, /\bneeded\b/); assert.doesNotMatch(cls, /\bmissing\b/, "red cleared as soon as text is entered");
+  assert.equal(await page.getAttribute("#adjustmentReason-1", "aria-invalid"), "false");
+  assert.notEqual(await page.$eval("#adjustmentReason-1", (e) => getComputedStyle(e).borderTopColor), "rgb(176, 0, 32)");
   await page.fill("#adjustmentReason-1", "Five days alongside for repairs.");
-  const after = await page.$$eval(".reviewRow[data-index='1'] .messages li.error", (ls) => ls.map((l) => l.dataset.code));
-  assert.deepEqual(after, []);
+  assert.equal(await page.isVisible(`${label} .reqTag`), true, "neutral indicator stays");
 });
 
 await step("no reason needed when final days equal the basis", async () => {
@@ -163,7 +272,7 @@ await step("no reason needed when final days equal the basis", async () => {
 
 await step("Converted days basis uses the calculated value", async () => {
   await page.selectOption("#examinerBasis-2", "CONVERTED_DAYS");
-  assert.equal(await page.textContent(".reviewRow[data-index='2'] .basisDays"), "43");
+  assert.match(await page.textContent(".reviewRow[data-index='2'] .basisDays"), /^43/);
   const codes = await page.$$eval(".reviewRow[data-index='2'] .messages li.error", (ls) => ls.map((l) => l.dataset.code));
   assert.ok(!codes.includes("CONVERTED_DAYS_NOT_CALCULATED"));
   await page.selectOption("#examinerBasis-2", "NONE");
@@ -175,6 +284,7 @@ await step("summary shows the four distinct totals", async () => {
   assert.equal(await page.textContent("#sumConvertedDays"), "129");
   assert.equal(await page.textContent("#sumConvertedMonths"), "(4.3 months)");
   assert.equal(await page.textContent("#sumFinalAcceptedDays"), "50");
+  assert.equal(await page.textContent("#sumDifference"), "-79");
   assert.equal(await page.textContent("#sumReviewed"), "2");
 });
 
@@ -188,6 +298,8 @@ await step("French: labels, months, input preserved across language switch", asy
   assert.match(await page.textContent(".reviewRow[data-index='1'] .calcText"), /jours crédités/);
   assert.equal(await page.inputValue("#adjustmentReason-1"), "Five days alongside for repairs.");
   assert.equal(await page.inputValue("#finalAcceptedDays-1"), "20");
+  assert.equal((await page.textContent(".reviewRow[data-index='1'] .reqTag")).trim(), "(obligatoire)");
+  assert.doesNotMatch(await page.getAttribute(".reviewRow[data-index='1'] .adjustmentLabel", "class"), /\bmissing\b/);
   const opts = await page.$$eval("#examinerBasis-0 option", (os) => os.filter((o) => o.value !== "NONE").map((o) => o.textContent.trim()));
   assert.deepEqual(opts, ["Jours à bord", "Jours en mer", "Jours convertis", "Détermination manuelle"]);
   await page.selectOption("#langSelector", "en");
@@ -217,13 +329,62 @@ await step("reload restores the examiner draft", async () => {
   assert.equal(await page.textContent("#sumFinalAcceptedDays"), "50");
 });
 
+await step("bug 4: final accepted days override everything (Not reviewed → status set automatically)", async () => {
+  // line 3 (index 2): Not reviewed, no basis, converted 43
+  await page.fill("#finalAcceptedDays-2", "40");
+  assert.equal(await page.inputValue("#reviewStatus-2"), "ACCEPTED_WITH_ADJUSTMENT");
+  const w = await page.$$eval(".reviewRow[data-index='2'] .messages li", (ls) => ls.map((l) => l.dataset.code));
+  assert.ok(w.includes("STATUS_SET_AUTOMATICALLY"));
+  assert.ok(w.includes("ADJUSTMENT_REASON_REQUIRED"));
+  assert.ok(!w.includes("EXAMINER_BASIS_REQUIRED"));
+  assert.equal(await page.textContent(".reviewRow[data-index='2'] .countedDays"), "40");
+  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "90");
+  assert.equal(await page.textContent("#sumDifference"), "-39");
+  assert.equal(await page.textContent("#sumMissingReason"), "1");
+  await page.fill("#finalAcceptedDays-2", "43");
+  assert.equal(await page.inputValue("#reviewStatus-2"), "ACCEPTED", "equal to converted days → Accepted");
+  await page.fill("#finalAcceptedDays-2", "");
+  assert.equal(await page.inputValue("#reviewStatus-2"), "NOT_REVIEWED");
+  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "50");
+});
+
+await step("bug 4: final days over converted days (no basis) count; rejected counts 0; save not blocked", async () => {
+  await page.selectOption("#reviewStatus-2", "ACCEPTED");
+  await page.fill("#finalAcceptedDays-2", "60");
+  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "110");
+  assert.equal(await page.textContent("#sumDifference"), "-19");
+  await page.fill("#finalAcceptedDays-2", "100");
+  assert.equal(await page.textContent("#sumDifference"), "+21");
+  await page.fill("#finalAcceptedDays-2", "60");
+  await page.click("#btnSave");
+  const draft = JSON.parse(await page.evaluate(() => localStorage.getItem("SeaServiceRecord.v0.5.0")));
+  assert.equal(draft.voyages[2].examinerReview.finalAcceptedDays, 60);
+  assert.equal(draft.voyages[2].examinerReview.effectiveAcceptedDays, 60);
+  assert.equal(draft.examinerAssessment.totalFinalAcceptedDays, 110);
+  assert.match(await page.textContent("#statusPanel"), /saved/i);
+  await page.selectOption("#reviewStatus-2", "REJECTED");
+  assert.equal(await page.textContent(".reviewRow[data-index='2'] .countedDays"), "0");
+  assert.equal(await page.textContent("#sumFinalAcceptedDays"), "50");
+  await page.fill("#finalAcceptedDays-2", "");
+  await page.selectOption("#reviewStatus-2", "NOT_REVIEWED");
+  await page.click("#btnSave");
+});
+
+await step("examiner Export PDF / Print copy shows examiner figures", async () => {
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+  const txt = await page.textContent("#printView");
+  assert.match(txt, /Total final accepted days50/);
+  assert.ok(!txt.includes("Unvetted"));
+});
+
 await step("import pre-0.4 JSON: legacy positionVerified/seaServiceVerified/polar/ice/DP/offshore/tanker", async () => {
   await page.setInputFiles("#fileImport", preFixture);
   await page.waitForFunction(() => window.__examinerDev.getRecord()?.candidate.surname === "Smith");
   assert.equal(await page.isChecked("#capacityVerified-0"), true);
   assert.equal(await page.isChecked("#specializedServiceVerified-0"), true);
   const spec = (await page.textContent("tr.voyageRow[data-index='0'] td.specialized")).replace(/\s+/g, " ");
-  assert.match(spec, /Polar waters and acceptable ice service/);
+  assert.match(spec, /Polar waters: \?/);
+  assert.match(spec, /Acceptable ice service: \?/);
   assert.match(spec, /Dynamic positioning and offshore service/);
   const codes = await page.$$eval(".reviewRow[data-index='0'] .messages li.warning", (ls) => ls.map((l) => l.dataset.code));
   assert.ok(codes.includes("TRANSFER_OPERATION_TYPE_REQUIRED"));

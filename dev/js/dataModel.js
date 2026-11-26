@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = "0.5.0";
-export const APPLICATION_VERSION = "0.6.0-dev.1";
+export const APPLICATION_VERSION = "0.7.0";
 
 export const ENUMS = Object.freeze({
   recordStatus: ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "ADDITIONAL_INFORMATION_REQUIRED", "ASSESSMENT_COMPLETED", "CLOSED"],
@@ -7,6 +7,8 @@ export const ENUMS = Object.freeze({
   identifierTypes: ["OFFICIAL", "IMO", "OTHER"],
   propulsionTypes: ["MOTOR", "STEAM", "DIESEL_ELECTRIC", "OTHER"],
   iceService: ["NONE", "POLAR", "ACCEPTABLE_ICE", "POLAR_AND_ACCEPTABLE_ICE"],
+  /** v0.7.0 — column K conditions; several may be selected, each with its own number of days. */
+  iceConditions: ["POLAR", "ACCEPTABLE_ICE"],
   transferOperation: ["NONE", "OIL_TRANSFER", "CHEMICAL_TRANSFER", "GAS_TRANSFER"],
   dpOffshoreService: ["NONE", "DP", "OFFSHORE", "DP_AND_OFFSHORE"],
   conversionStatus: ["NOT_CALCULATED", "NOT_APPLICABLE", "CALCULATED", "MANUAL_REVIEW_REQUIRED", "CALCULATION_ERROR"],
@@ -34,6 +36,14 @@ export function createExaminerReview() {
     examinerBasis: "NONE",
     basisDays: null,
     finalAcceptedDays: null,
+    // v0.7.0 — the value the final days are compared with: the selected basis,
+    // or the calculated converted days when no basis is selected.
+    referenceDays: null,
+    referenceSource: null,
+    // v0.7.0 — the figure counted in the examiner totals for this line.
+    effectiveAcceptedDays: 0,
+    acceptedDaysSource: "NONE",
+    statusSetAutomatically: false,
     adjustmentRequired: false,
     adjustmentReasonCode: null,
     adjustmentReason: "",
@@ -42,6 +52,26 @@ export function createExaminerReview() {
     reviewedAt: null,
     outstandingIssues: []
   };
+}
+
+/** Column K (v0.7.0): one entry per ice condition — selected flag and days in that condition. */
+export function createIceConditions() {
+  return Object.fromEntries(ENUMS.iceConditions.map((code) => [code, { selected: false, days: null }]));
+}
+
+/** Combined legacy code (NONE / POLAR / ACCEPTABLE_ICE / POLAR_AND_ACCEPTABLE_ICE) from the conditions. */
+export function iceServiceFromConditions(conditions = {}) {
+  const polar = Boolean(conditions.POLAR?.selected);
+  const ice = Boolean(conditions.ACCEPTABLE_ICE?.selected);
+  return polar && ice ? "POLAR_AND_ACCEPTABLE_ICE" : polar ? "POLAR" : ice ? "ACCEPTABLE_ICE" : "NONE";
+}
+
+/** Conditions from a legacy combined code (days unknown → null). */
+export function iceConditionsFromService(code = "NONE") {
+  const c = createIceConditions();
+  if (code === "POLAR" || code === "POLAR_AND_ACCEPTABLE_ICE") c.POLAR.selected = true;
+  if (code === "ACCEPTABLE_ICE" || code === "POLAR_AND_ACCEPTABLE_ICE") c.ACCEPTABLE_ICE.selected = true;
+  return c;
 }
 
 export function createVoyage(sequenceNumber = 1) {
@@ -61,7 +91,7 @@ export function createVoyage(sequenceNumber = 1) {
       daysAtSeaEntered: null, daysAtSeaEffective: null, daysAtSeaDifferent: false
     },
     specializedService: {
-      iceService: "NONE", passengerService: false, transferOperation: "NONE",
+      iceService: "NONE", iceConditions: createIceConditions(), passengerService: false, transferOperation: "NONE",
       fishingService: false, dpOffshoreService: "NONE", supportingDetails: ""
     },
     calculation: {
@@ -108,7 +138,11 @@ export function createEmptySummary() {
   return {
     candidateClaim: { totalDaysOnBoard: 0, totalDaysAtSea: 0 },
     automatedCalculation: { totalConvertedDays: null, recordsCalculated: 0, recordsNotCalculated: 0, recordsRequiringManualReview: 0 },
-    examinerDetermination: { recordsReviewed: 0, recordsAccepted: 0, recordsAcceptedWithAdjustment: 0, recordsRejected: 0, recordsRequiringInformation: 0, totalFinalAcceptedDays: 0 },
+    examinerDetermination: {
+      recordsReviewed: 0, recordsNotReviewed: 0, recordsAccepted: 0, recordsAcceptedWithAdjustment: 0, recordsRejected: 0, recordsRequiringInformation: 0,
+      totalFinalAcceptedDays: 0, totalFinalAcceptedMonths: 0, differenceFromConverted: null,
+      linesWithFinalDays: 0, linesMissingAdjustmentReason: 0
+    },
     specializedService: { polarDays: 0, acceptableIceDays: 0, oilTransferDays: 0, chemicalTransferDays: 0, gasTransferDays: 0, passengerServiceDays: 0, fishingServiceDays: 0, dynamicPositioningDays: 0, offshoreServiceDays: 0 },
     capacityService: { masterDays: 0, chiefMateDays: 0, mateDays: 0, supernumeraryMateDays: 0, chiefEngineerDays: 0, secondEngineerDays: 0, engineerOfficerDays: 0 },
     vesselThresholds: { gt500Days: 0, gt3000Days: 0 },

@@ -25,3 +25,15 @@
 .candidateTable thead th:nth-last-child(2){ background:#003366; }
 .candidateTable td:nth-last-child(2){ background:#eef7ee; min-width:80px; }
 .candidateTable td input, .candidateTable td select{ min-width:60px; font-size:12px; }
+
+/* v0.7.0 — column K: several ice conditions, each with its own number of days */
+.candidateTable td.iceCell{ min-width:190px; }
+.iceOption{ display:flex; align-items:center; gap:4px; margin:2px 0; }
+.iceOption label{ display:flex; align-items:center; gap:4px; margin:0; font-weight:normal; font-size:12px; flex:1; white-space:nowrap; }
+.candidateTable .iceOption input[type="number"]{ width:64px; min-width:64px; }
+
+/* v0.7.0 — unvetted (provisional) label, EN + FR */
+.unvettedBox{ margin:6px 0 10px; padding:8px 12px; background:#fff8e1; border:2px dashed #b45f06; color:#5c3200; }
+.unvettedBox strong{ display:block; text-transform:uppercase; letter-spacing:.02em; }
+.unvettedBox .unvettedOther{ display:block; font-size:13px; font-style:italic; }
+.unvettedCard{ border-left-color:#b45f06; background:#fff8e1; }

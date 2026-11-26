@@ -1,10 +1,15 @@
 /**
- * Storage engine — v0.5.0 development build.
+ * Storage engine — v0.7.0.
  *
- * The production candidate form (index.html) saves under "SeaServiceRecord"
- * (schema 0.4.0). This module NEVER writes to that key. Examiner drafts are kept
- * under "SeaServiceRecord.v0.5.0" and the development candidate form saves under
- * "SeaServiceRecord.v0.5.0.candidate".
+ * Every record stays in the individual's browser (localStorage); nothing is sent
+ * anywhere. Records travel between candidate and examiner as exported JSON files.
+ *
+ *  - "SeaServiceRecord.v0.5.0.candidate" — candidate record, written by the production
+ *    candidate form (index.html, from v0.7.0) and the development candidate form.
+ *  - "SeaServiceRecord.v0.5.0"           — examiner draft (dev/examiner.html).
+ *  - "SeaServiceRecord"                  — record saved by the production form before v0.7.0
+ *    (schema 0.4.0). Read and converted in memory only; this module NEVER writes to it,
+ *    so rolling back to the old page still finds it.
  */
 import { migrateRecordToV050 } from "./migrationEngine.js";
 

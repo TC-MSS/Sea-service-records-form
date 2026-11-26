@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Statement of Sea Service for a Certificate (development v0.6.0)</title>
+<title>Statement of Sea Service for a Certificate (development v0.7.0)</title>
 <link rel="stylesheet" href="../css/app.css">
 <link rel="stylesheet" href="css/examiner.css">
 <link rel="stylesheet" href="css/candidate.css">
 </head>
-<body>
+<body data-variant="development">
 
 <header class="banner">
-  <h1 data-i18n="candidatePageTitle">Statement of Sea Service for a Certificate (development v0.6.0)</h1>
+  <h1 data-i18n="candidatePageTitle">Statement of Sea Service for a Certificate (development v0.7.0)</h1>
   <select id="langSelector" aria-label="Language / Langue">
     <option value="en">English</option>
     <option value="fr">Français</option>
@@ -34,6 +34,10 @@
 
 <section>
   <h2 data-i18n="seaServiceRecords">Sea Service Records</h2>
+  <div class="unvettedBox" role="note">
+    <strong data-i18n="unvettedTitle">Unvetted sea service — subject to examiner review</strong>
+    <span class="unvettedOther" data-i18n="unvettedTitleOther">Service en mer non vérifié — sous réserve de l’examen par l’examinateur</span>
+  </div>
   <div class="tableWrap">
   <table id="serviceTable" class="candidateTable">
     <thead><tr>
@@ -57,7 +61,7 @@
       <th data-i18n="disembark">Q<br>Disembark</th>
       <th data-i18n="daysOnBoard">R<br>Days on board</th>
       <th data-i18n="daysAtSea">S<br>Days at sea, if different</th>
-      <th data-i18n="convertedDays">T<br>Converted days</th>
+      <th data-i18n="convertedDaysUnvetted">T<br>Converted days (unvetted)</th>
       <th data-i18n="actions">Actions</th>
     </tr></thead>
     <tbody id="recordsBody"></tbody>
@@ -68,13 +72,19 @@
 
 <section>
   <h2 data-i18n="candidateSummary">Sea Service Calculation</h2>
+  <div class="unvettedBox" role="note">
+    <strong data-i18n="unvettedTitle">Unvetted sea service — subject to examiner review</strong>
+    <span class="unvettedOther" data-i18n="unvettedTitleOther">Service en mer non vérifié — sous réserve de l’examen par l’examinateur</span>
+  </div>
   <div class="summaryGrid">
     <div class="summaryCard">
       <h3 data-i18n="candidateClaim">Candidate claim</h3>
       <div><span data-i18n="totalDaysOnBoard">Total days on board</span>: <strong id="sumDaysOnBoard">0</strong></div>
       <div><span data-i18n="totalDaysAtSea">Total days at sea</span>: <strong id="sumDaysAtSea">0</strong></div>
+      <div><span data-i18n="polarDays">Polar waters (days entered)</span>: <span id="sumPolarDays">0</span></div>
+      <div><span data-i18n="acceptableIceDays">Acceptable ice service (days entered)</span>: <span id="sumIceDays">0</span></div>
     </div>
-    <div class="summaryCard">
+    <div class="summaryCard unvettedCard">
       <h3 data-i18n="creditedService">Credited sea service</h3>
       <div><span data-i18n="totalConvertedDays">Total converted days</span>: <strong id="sumConvertedDays">Not calculated</strong> <span id="sumConvertedMonths"></span></div>
       <div><span data-i18n="linesManualReview">Lines requiring manual review</span>: <span id="sumManual">0</span></div>
@@ -83,6 +93,7 @@
       <div><span data-i18n="juniorExcess">Junior officer service above 9 months not counted (MPR s. 117)</span>: <span id="sumJuniorExcess">0</span></div>
     </div>
   </div>
+  <p class="note" data-i18n="unvettedNote">Converted days are calculated automatically from your entries under TP 2293 Chapter 3 and MPR sections 115 to 117. They are provisional: only the examiner's review determines the sea service accepted.</p>
   <p class="note" data-i18n="calcNote">Engagement and discharge days together count as one day (TP 2293 s. 3.3(4)). Months = credited days ÷ 30 (MPR s. 115(3)).</p>
   <h3 data-i18n="findings">Findings</h3>
   <ul id="findings" class="findings"></ul>
@@ -97,11 +108,18 @@
   <div class="toolbar">
     <button type="button" id="btnSave" data-i18n="save">Save</button>
     <button type="button" id="btnExport" data-i18n="exportJson">Export JSON</button>
-    <button type="button" id="btnPrint" data-i18n="print">Print</button>
+    <label class="fileButton"><span data-i18n="importJson">Import JSON</span>
+      <input type="file" id="fileImport" accept="application/json,.json">
+    </label>
+    <button type="button" id="btnPrint" data-i18n="exportPdf">Export PDF / Print</button>
     <button type="button" id="btnNew" data-i18n="newRecord">New record</button>
   </div>
+  <p class="note" data-i18n="storageNote">Your record is saved only in this browser on this computer. To send it to the examiner, use Export JSON and attach the file to your e-mail. Use Export PDF / Print for a paper or PDF copy.</p>
   <div id="statusPanel" role="status" aria-live="polite"></div>
 </section>
+
+<!-- Read-only copy built for "Export PDF / Print" (js/printView.js); hidden on screen. -->
+<div id="printView" class="printView" aria-hidden="true"></div>
 
 <script type="module" src="js/candidate.js"></script>
 </body>

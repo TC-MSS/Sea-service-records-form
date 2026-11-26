@@ -1,10 +1,18 @@
 /**
- * Examiner review page controller — v0.5.0 development build.
+ * Examiner review page controller — v0.7.0 development build.
+ *
+ * v0.7.0:
+ *  - "Schema / record" is no longer displayed (schemaVersion and recordId stay in the saved/exported JSON).
+ *  - Adjustment reason: neutral "(required)" indicator when a reason is needed; red only while it is empty.
+ *  - Final accepted days override everything; the basis is optional (reference = converted days by default);
+ *    a missing reason is a warning, never a block; final days on a "Not reviewed" line set the status.
+ *  - Export PDF / Print builds a read-only copy (printView.js).
  */
 import { TEXT, t } from "./examinerI18n.js";
 import { CAPACITIES, VESSEL_TYPES, CERTIFICATES, PROPULSION, VOYAGE_CLASSES, labelFor } from "./referenceData.js";
 import { applyExaminerReview, EXAMINER_INPUT_FIELDS } from "./examinerReview.js";
-import { validateVoyage } from "./validationEngine.js";
+import { validateVoyage, reasonNeeded, reasonMissing } from "./validationEngine.js";
+import { specializedParts, examinerPrintHtml, printRecord, fileStem } from "./printView.js";
 import { buildSummary } from "./summaryEngine.js";
 import { toNumberOrNull, recalculateVoyages } from "./calculationEngine.js";
 import { RULES_VERSION } from "./tp2293Engine.js";
@@ -34,13 +42,7 @@ function applyStaticText(root = document) {
 }
 
 function specializedText(v) {
-  const s = v.specializedService;
-  const parts = [];
-  if (s.iceService && s.iceService !== "NONE") parts.push(t(language, s.iceService));
-  if (s.passengerService) parts.push(t(language, "passengerService"));
-  if (s.transferOperation && s.transferOperation !== "NONE") parts.push(t(language, s.transferOperation));
-  if (s.fishingService) parts.push(t(language, "fishingService"));
-  if (s.dpOffshoreService && s.dpOffshoreService !== "NONE") parts.push(t(language, s.dpOffshoreService));
+  const parts = specializedParts(v, language);
   return parts.length ? parts.map(esc).join("<br>") : t(language, "none");
 }
 
@@ -102,25 +104,33 @@ function refreshLine(index) {
   const result = applyExaminerReview(v, readPanel(panel), $("examinerName").value || null);
   const voyageResult = validateVoyage(v);
   const r = v.examinerReview;
+  if (result.statusChanged) panel.querySelector("[data-field=reviewStatus]").value = r.reviewStatus;
 
   panel.querySelector(".calcText").textContent = language === "fr" ? v.calculation.explanationFr : v.calculation.explanationEn;
-  panel.querySelector(".basisDays").textContent =
-    r.examinerBasis === "CONVERTED_DAYS" && r.basisDays === null ? t(language, "notCalculated")
-      : r.basisDays === null ? "—" : String(r.basisDays);
+  const refBox = panel.querySelector(".basisDays");
+  const refValue = r.referenceDays === null
+    ? (r.referenceSource === "CONVERTED_DAYS" ? t(language, "notCalculated") : "—")
+    : String(r.referenceDays);
+  refBox.innerHTML = `${esc(refValue)}<span class="refSource">${esc(r.referenceSource ? t(language, `refSource_${r.referenceSource}`) : "")}</span>`;
+  panel.querySelector(".countedDays").textContent = String(r.effectiveAcceptedDays ?? 0);
 
-  const needsReason = r.adjustmentRequired || r.reviewStatus === "ACCEPTED_WITH_ADJUSTMENT";
+  // Neutral "(required)" indicator when a reason is needed; red only while the reason is empty.
+  const needed = reasonNeeded(v);
+  const missing = reasonMissing(v);
   const label = panel.querySelector(".adjustmentLabel");
-  label.classList.toggle("required", needsReason);
-  label.querySelector(".adjustmentText").textContent = t(language, needsReason ? "adjustmentReasonRequired" : "adjustmentReason");
+  label.classList.toggle("needed", needed);
+  label.classList.toggle("missing", missing);
+  label.classList.remove("required");
   const textarea = label.querySelector("textarea");
-  textarea.required = needsReason;
-  textarea.setAttribute("aria-invalid", String(result.errors.includes("ADJUSTMENT_REASON_REQUIRED")));
+  textarea.required = needed;
+  textarea.setAttribute("aria-invalid", String(missing));
 
   const errors = [...voyageResult.errors, ...result.errors];
   const warnings = [...voyageResult.warnings, ...result.warnings];
+  const warnClass = (c) => (c === "ADJUSTMENT_REASON_REQUIRED" ? "warning reasonMissing" : c === "STATUS_SET_AUTOMATICALLY" ? "warning info" : "warning");
   panel.querySelector(".messages").innerHTML =
     errors.map((c) => `<li class="error" data-code="${c}">${esc(t(language, c))}</li>`).join("") +
-    warnings.map((c) => `<li class="warning" data-code="${c}">${esc(t(language, c))}</li>`).join("");
+    warnings.map((c) => `<li class="${warnClass(c)}" data-code="${c}">${esc(t(language, c))}</li>`).join("");
   panel.classList.toggle("hasErrors", errors.length > 0);
   return { errors, warnings };
 }
@@ -134,6 +144,8 @@ function refreshSummary() {
   record.examinerAssessment.totalFinalAcceptedDays = s.examinerDetermination.totalFinalAcceptedDays;
   $("sumDaysOnBoard").textContent = s.candidateClaim.totalDaysOnBoard;
   $("sumDaysAtSea").textContent = s.candidateClaim.totalDaysAtSea;
+  $("sumPolarDays").textContent = s.specializedService.polarDays;
+  $("sumIceDays").textContent = s.specializedService.acceptableIceDays;
   const ac = s.automatedCalculation;
   $("sumConvertedDays").textContent = ac.totalConvertedDays === null ? t(language, "notCalculated") : ac.totalConvertedDays;
   $("sumConvertedMonths").textContent = ac.totalConvertedMonths === null ? "" : `(${monthsText(ac.totalConvertedMonths)})`;
@@ -144,6 +156,12 @@ function refreshSummary() {
   $("sumRules").textContent = ac.rulesVersion || RULES_VERSION;
   $("sumFinalAcceptedDays").textContent = s.examinerDetermination.totalFinalAcceptedDays;
   $("sumFinalAcceptedMonths").textContent = `(${monthsText(s.examinerDetermination.totalFinalAcceptedMonths)})`;
+  const diff = s.examinerDetermination.differenceFromConverted;
+  const diffEl = $("sumDifference");
+  diffEl.textContent = diff === null ? "—" : diff > 0 ? `+${diff}` : String(diff);
+  diffEl.className = diff === null || diff === 0 ? "" : diff < 0 ? "diffNeg" : "diffPos";
+  $("sumFinalLines").textContent = s.examinerDetermination.linesWithFinalDays;
+  $("sumMissingReason").textContent = s.examinerDetermination.linesMissingAdjustmentReason;
   $("sumReviewed").textContent = s.examinerDetermination.recordsReviewed;
   $("sumNotReviewed").textContent = s.examinerDetermination.recordsNotReviewed;
   $("sumAccepted").textContent = s.examinerDetermination.recordsAccepted;
@@ -181,7 +199,6 @@ function render() {
   $("infoApplicationDate").textContent = a.applicationDate || "—";
   $("infoCertificate").textContent = labelFor(CERTIFICATES, a.certificateAppliedFor.code, language) || "—";
   $("infoCertificateHeld").textContent = labelFor(CERTIFICATES, a.certificateHeld.code, language) || "—";
-  $("infoSchema").textContent = `${record.schemaVersion} · ${record.recordId}`;
   $("generalComments").value = record.examinerAssessment.generalComments || "";
   $("examinerName").value = record.examinerAssessment.examiner.examinerName || "";
 
@@ -247,11 +264,25 @@ function exportJson() {
   const blob = new Blob([storage.exportRecord(record)], { type: "application/json" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `SeaServiceRecord-${record.candidate.cdnNumber || record.recordId}-v0.5.0.json`;
+  link.download = `${fileStem(record)}-examiner.json`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function fillPrintView() {
+  if (!record) { $("printView").innerHTML = ""; return; }
+  collectRecordLevel();
+  record.voyages.forEach((_, i) => onPanelInput(i));
+  $("printView").innerHTML = examinerPrintHtml(record, record.calculationSummary, language);
+}
+
+function exportPdf() {
+  if (!record) return setStatus("noRecord", {}, "status-warning");
+  fillPrintView();
+  setStatus("pdfHint");
+  printRecord($("printView").innerHTML, `${fileStem(record)}-examiner`);
 }
 
 function switchLanguage() {
@@ -283,7 +314,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("btnSave").addEventListener("click", save);
   $("btnExport").addEventListener("click", exportJson);
-  $("btnPrint").addEventListener("click", () => window.print());
+  $("btnPrint").addEventListener("click", exportPdf);
+  window.addEventListener("beforeprint", fillPrintView);
   $("generalComments").addEventListener("input", collectRecordLevel);
   $("examinerName").addEventListener("input", collectRecordLevel);
   switchLanguage();
