@@ -1,6 +1,6 @@
 {
   "name": "sea-service-records-form-dev",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Sea Service Records Form — shared modules (production + development pages), v0.5.0 data model, TP 2293 / MPR calculation, examiner review, tests and tools.",
   "type": "module",

@@ -14,7 +14,7 @@
  * Original legacy flags are preserved in voyage.metadata.legacyFields so that
  * nothing entered under an older version is lost.
  */
-import { createVoyage, createSeaServiceRecord, createExaminerReview, fillDefaults, iceConditionsFromService, SCHEMA_VERSION, APPLICATION_VERSION } from "./dataModel.js";
+import { createVoyage, createSeaServiceRecord, createExaminerReview, fillDefaults, iceConditionsFromService, transferConditionsFromOperation, SCHEMA_VERSION, APPLICATION_VERSION } from "./dataModel.js";
 import { recalculateVoyages, toNumberOrNull, updateCandidateDays } from "./calculationEngine.js";
 
 const LEGACY_VOYAGE_FLAGS = [
@@ -87,6 +87,9 @@ export function migrateVoyageToV050(old = {}, sequenceNumber = 1) {
       : iceConditionsFromService(legacyIceService(old)),
     passengerService: truthy(old.passenger ?? old.passengerService),
     transferOperation: legacyTransferOperation(old),
+    transferConditions: old.transferConditions && typeof old.transferConditions === "object"
+      ? JSON.parse(JSON.stringify(old.transferConditions))
+      : transferConditionsFromOperation(legacyTransferOperation(old)),
     fishingService: truthy(old.fishing ?? old.fishingService),
     dpOffshoreService: legacyDpOffshore(old)
   };
@@ -108,6 +111,10 @@ export function normaliseVoyage(v, sequenceNumber) {
   const template = createVoyage(sequenceNumber);
   if (v.specializedService && !v.specializedService.iceConditions) {
     v.specializedService.iceConditions = iceConditionsFromService(v.specializedService.iceService);
+  }
+  // v1.0.0 — column M: single transfer code → that type selected, days blank.
+  if (v.specializedService && !v.specializedService.transferConditions) {
+    v.specializedService.transferConditions = transferConditionsFromOperation(v.specializedService.transferOperation);
   }
   fillDefaults(v, template);
   fillDefaults(v.examinerReview, createExaminerReview());

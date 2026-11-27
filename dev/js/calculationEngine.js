@@ -1,12 +1,12 @@
 /**
- * Calculation engine — v0.9.0 (shared by the production and development pages).
+ * Calculation engine — v1.0.0 (shared by the production and development pages).
  *
  * Candidate day counts, examiner-basis resolution and the entry point to the
  * TP 2293 / MPR conversion engine (tp2293Engine.js).
  * Converted days are null when they cannot be calculated — never zero.
  */
 import { serviceDaysOnBoard, convertAll } from "./tp2293Engine.js";
-import { ENUMS, createIceConditions, iceServiceFromConditions } from "./dataModel.js";
+import { ENUMS, createIceConditions, iceServiceFromConditions, createTransferConditions, transferOperationFromConditions } from "./dataModel.js";
 import { updateServiceReview } from "./serviceVetting.js";
 
 /**
@@ -66,6 +66,24 @@ export function syncIceService(voyage) {
     c.selected = Boolean(c.selected);
   }
   s.iceService = iceServiceFromConditions(s.iceConditions);
+  syncTransferOperation(voyage);
+  return voyage;
+}
+
+/**
+ * Column M (v1.0.0): several transfer types may be selected, each with its own days (optional).
+ * Entering days selects the type. transferOperation (legacy single code) = first selected type.
+ */
+export function syncTransferOperation(voyage) {
+  const s = voyage.specializedService;
+  if (!s.transferConditions || typeof s.transferConditions !== "object") s.transferConditions = createTransferConditions();
+  for (const code of ENUMS.transferConditions) {
+    const c = s.transferConditions[code] || (s.transferConditions[code] = { selected: false, days: null });
+    c.days = toNumberOrNull(c.days);
+    if (c.days !== null && c.days > 0) c.selected = true;
+    c.selected = Boolean(c.selected);
+  }
+  s.transferOperation = transferOperationFromConditions(s.transferConditions);
   return voyage;
 }
 

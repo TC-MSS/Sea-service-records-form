@@ -169,12 +169,13 @@ test("v0.8.0 item 6: approved days per special service, overlapping dates counte
     Object.assign(v.specializedService, spec);
     return v;
   };
-  const a = mk("2025-01-01", "2025-01-31", { transferOperation: "OIL_TRANSFER", passengerService: true }); // 30 days
-  const b = mk("2025-01-21", "2025-02-10", { transferOperation: "OIL_TRANSFER" });                         // 20 days, 10 overlap
+  const oil = (days) => ({ OIL_TRANSFER: { selected: true, days } });
+  const a = mk("2025-01-01", "2025-01-31", { transferConditions: oil(30), passengerService: true }); // 30 days
+  const b = mk("2025-01-21", "2025-02-10", { transferConditions: oil(20) });                         // 20 days, 10 overlap
   const c = mk("2025-03-01", "2025-03-31", { iceConditions: { POLAR: { selected: true, days: 40 }, ACCEPTABLE_ICE: { selected: true, days: 12 } } });
-  const d = mk("2025-04-01", "2025-04-11", { transferOperation: "GAS_TRANSFER" });
+  const d = mk("2025-04-01", "2025-04-11", { transferConditions: { GAS_TRANSFER: { selected: true, days: 10 } } });
   recalculateVoyages([a, b, c, d]);
-  for (const v of [a, b, c]) applyExaminerReview(v, { reviewStatus: "ACCEPTED" });
+  for (const v of [a, b, c]) acceptLine(v);
   applyExaminerReview(d, { reviewStatus: "REJECTED" });
   const s = buildSummary([a, b, c, d]);
   assert.equal(s.examinerDetermination.totalFinalAcceptedDays, 80);
@@ -322,7 +323,7 @@ test("PDF/print copies: unvetted label (candidate); v0.8.0 examiner summary with
   r.voyages[1].specializedService.iceConditions.POLAR.days = 12;
   recalculateVoyages(r.voyages);
   applyExaminerReview(r.voyages[0], { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: 25, adjustmentReason: "Leave" });
-  applyExaminerReview(r.voyages[1], { reviewStatus: "ACCEPTED" });
+  acceptLine(r.voyages[1]);
   const s = buildSummary(r.voyages);
   const c = candidatePrintHtml(r, s, "en", "Statement of Sea Service for a Certificate");
   assert.match(c, /Unvetted sea service — subject to examiner review/);
@@ -337,7 +338,8 @@ test("PDF/print copies: unvetted label (candidate); v0.8.0 examiner summary with
   assert.match(e, /Certificate applied for: <strong>Master 500 Gross Tonnage, Near Coastal<\/strong>/);
   assert.match(e, /Difference from total converted days<\/th><td>-48/);
   assert.match(e, /Polar waters<\/th><td>12/);
-  assert.doesNotMatch(e, /Examiner basis|Lines reviewed|Lines with/);
+  assert.match(e, /Polar waters — Accepted: <strong>12<\/strong>/);
+  assert.doesNotMatch(e, /Examiner basis|Lines reviewed|Lines with|overlapping dates counted once/);
 });
 
 test("v0.8.0 item 1: capacity MATE is 'Mate in Charge of a Watch' / 'Officier de pont en charge du quart à la passerelle'", () => {
@@ -346,9 +348,16 @@ test("v0.8.0 item 1: capacity MATE is 'Mate in Charge of a Watch' / 'Officier de
   assert.equal(labelFor(CAPACITIES, "SUPERNUMERARY_MATE", "en"), "Supernumerary Mate");
 });
 
-// ---------------- v0.9.0 ----------------
+// ---------------- v0.9.0 / v1.0.0 ----------------
 import { candidateExportCheck, exportFileName, serviceDateRange, certificateAcronym, certificateDepartment, CERTIFICATE_INFO } from "../js/recordRules.js";
 import { VOYAGE_CLASSES, CERTIFICATES } from "../js/referenceData.js";
+
+/** v1.0.0 — accept a line and every special service on it. */
+function acceptLine(v, status = "ACCEPTED") {
+  applyExaminerReview(v, { reviewStatus: status });
+  const sr = Object.fromEntries(Object.keys(v.examinerReview.serviceReview || {}).map((k) => [k, { reviewStatus: "ACCEPTED" }]));
+  return applyExaminerReview(v, { serviceReview: sr });
+}
 
 function fullRecord() {
   const r = migrateRecordToV050(fixture("legacy-v0.4.0.json"));
@@ -408,41 +417,98 @@ test("v0.9.0 item 8: NC1 / NC2 spelled out as Near Coastal", () => {
   assert.equal(labelFor(VOYAGE_CLASSES, "NC2", "fr"), "À proximité du littoral, classe 2");
 });
 
-test("v0.9.0 items 1–2: examiner vets ice and transfer days; over-limit is an error, summary shows final + automatic", () => {
+test("v1.0.0 item 2: review status per special service; final accepted days per service; over-limit error", () => {
   const r = fullRecord();
-  const v = r.voyages[1]; // A = 39, converted 56, polar (no days), oil transfer
+  const v = r.voyages[1]; // A = 39, converted 56; polar and oil transfer selected
   v.specializedService.iceConditions.POLAR.days = 30;
+  v.specializedService.transferConditions.OIL_TRANSFER.days = 20;
   recalculateVoyages(r.voyages);
   let res = applyExaminerReview(v, { reviewStatus: "ACCEPTED" });
   assert.deepEqual(Object.keys(v.examinerReview.serviceReview), ["POLAR", "OIL_TRANSFER"]);
   assert.equal(v.examinerReview.serviceReview.POLAR.automaticDays, 30);
-  assert.equal(v.examinerReview.serviceReview.OIL_TRANSFER.automaticDays, 56);
+  assert.equal(v.examinerReview.serviceReview.OIL_TRANSFER.automaticDays, 20, "v1.0.0: candidate's transfer days, not the whole line");
+  assert.ok(res.warnings.includes("SERVICE_STATUS_REQUIRED"));
+  assert.equal(v.examinerReview.serviceReview.POLAR.effectiveDays, 0, "no status yet → 0");
 
-  res = applyExaminerReview(v, { serviceReview: { POLAR: { finalAcceptedDays: 60 }, OIL_TRANSFER: { finalAcceptedDays: 50 } } });
-  assert.ok(res.errors.includes("SERVICE_DAYS_EXCEED_LINE"), "60 > 56 counted");
-  assert.equal(v.examinerReview.serviceReview.POLAR.effectiveDays, 56, "capped at the line's counted days");
+  res = applyExaminerReview(v, { serviceReview: { POLAR: { reviewStatus: "ACCEPTED", finalAcceptedDays: 99 }, OIL_TRANSFER: { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT" } } });
+  assert.equal(v.examinerReview.serviceReview.POLAR.finalAcceptedDays, null, "adjusted days only with adjustment");
+  assert.equal(v.examinerReview.serviceReview.POLAR.effectiveDays, 30);
+  assert.ok(res.warnings.includes("SERVICE_FINAL_REQUIRED"));
   assert.ok(res.warnings.includes("SERVICE_REASON_REQUIRED"));
+  assert.equal(v.examinerReview.serviceReview.OIL_TRANSFER.effectiveDays, 0);
 
-  res = applyExaminerReview(v, { serviceReview: { POLAR: { finalAcceptedDays: 25, adjustmentReason: "Ice log" }, OIL_TRANSFER: { finalAcceptedDays: 50, adjustmentReason: "Log" } } });
+  res = applyExaminerReview(v, { serviceReview: { POLAR: { reviewStatus: "ACCEPTED" }, OIL_TRANSFER: { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: 60 } } });
+  assert.ok(res.errors.includes("SERVICE_DAYS_EXCEED_LINE"), "60 > 56 counted");
+  assert.equal(v.examinerReview.serviceReview.OIL_TRANSFER.effectiveDays, 56, "capped");
+
+  res = applyExaminerReview(v, { serviceReview: { POLAR: { reviewStatus: "REJECTED" }, OIL_TRANSFER: { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: 25, adjustmentReason: "Log" } } });
   assert.equal(res.valid, true);
-  assert.ok(!res.warnings.includes("SERVICE_REASON_REQUIRED"));
-  r.voyages.forEach((x, i) => { if (i !== 1) applyExaminerReview(x, { reviewStatus: "ACCEPTED" }); });
+  assert.ok(!res.warnings.some((w) => w.startsWith("SERVICE_")));
+  assert.equal(v.examinerReview.serviceReview.POLAR.effectiveDays, 0);
+  r.voyages.forEach((x, i) => { if (i !== 1) acceptLine(x); });
   const e = buildSummary(r.voyages).examinerDetermination;
-  assert.equal(e.specialServiceApprovedDays.POLAR, 25);
+  assert.equal(e.specialServiceApprovedDays.POLAR, 0);
   assert.equal(e.specialServiceAutomaticDays.POLAR, 30);
-  assert.equal(e.specialServiceAdjusted.POLAR, true);
-  assert.equal(e.specialServiceApprovedDays.OIL_TRANSFER, 50);
-  assert.equal(e.specialServiceAdjusted.PASSENGER, false, "only ice and transfer are vetted");
+  assert.equal(e.specialServiceAdjusted.POLAR, true, "rejected differs from automatic");
+  assert.equal(e.specialServiceApprovedDays.OIL_TRANSFER, 25);
+  assert.equal(e.specialServiceAdjusted.OIL_TRANSFER, true);
+  assert.equal(e.specialServiceAdjusted.PASSENGER, false);
 
   applyExaminerReview(v, { reviewStatus: "REJECTED" });
-  assert.equal(v.examinerReview.serviceReview.POLAR.finalAcceptedDays, null, "cleared when the line counts 0");
-  assert.equal(v.examinerReview.serviceReview.POLAR.effectiveDays, 0);
-  assert.equal(buildSummary(r.voyages).examinerDetermination.specialServiceApprovedDays.OIL_TRANSFER, 0);
+  assert.equal(v.examinerReview.serviceReview.OIL_TRANSFER.reviewStatus, "", "cleared when the line counts 0");
+  assert.equal(v.examinerReview.serviceReview.OIL_TRANSFER.effectiveDays, 0);
+});
+
+test("v1.0.0 item 1: column M — several transfer types, each with days; days above days on board block export", () => {
+  const r = fullRecord();
+  const v = r.voyages[1]; // A = 39, oil transfer from the 0.4.0 record
+  assert.deepEqual(v.specializedService.transferConditions.OIL_TRANSFER, { selected: true, days: null }, "older single type → ticked, days blank");
+  v.specializedService.transferConditions.GAS_TRANSFER.days = "5";
+  recalculateVoyages(r.voyages);
+  assert.equal(v.specializedService.transferConditions.GAS_TRANSFER.selected, true, "days tick the type");
+  assert.equal(v.specializedService.transferOperation, "OIL_TRANSFER", "legacy code = first selected type");
+  assert.ok(validateVoyage(v).warnings.includes("TRANSFER_DAYS_NOT_STATED"));
+  assert.equal(candidateExportCheck(r).ok, true, "blank transfer days allowed");
+  v.specializedService.transferConditions.OIL_TRANSFER.days = 40;
+  recalculateVoyages(r.voyages);
+  assert.ok(validateVoyage(v).errors.includes("TRANSFER_DAYS_EXCEED_ONBOARD"));
+  assert.deepEqual(candidateExportCheck(r).lines, [{ line: 2, missing: [], errors: ["TRANSFER_DAYS_EXCEED_ONBOARD"] }]);
+  const s = buildSummary(r.voyages);
+  assert.equal(s.specializedService.oilTransferDays, 40);
+  assert.equal(s.specializedService.gasTransferDays, 5);
+  acceptLine(v);
+  assert.equal(v.examinerReview.serviceReview.GAS_TRANSFER.automaticDays, 5);
+  assert.equal(v.examinerReview.serviceReview.OIL_TRANSFER.automaticDays, 40 > 56 ? 56 : 40);
+});
+
+test("v1.0.0 item 1: ticked service without days → automatic 0", () => {
+  const r = fullRecord(); // line 2: polar and oil transfer ticked, no days
+  acceptLine(r.voyages[1]);
+  assert.equal(r.voyages[1].examinerReview.serviceReview.POLAR.automaticDays, 0);
+  assert.equal(r.voyages[1].examinerReview.serviceReview.OIL_TRANSFER.automaticDays, 0);
+});
+
+test("v1.0.0: v0.9.0 service reviews keep the examiner's figure", () => {
+  const r = fullRecord();
+  const v = r.voyages[1]; // counted 56 when Accepted
+  acceptLine(v);
+  const saved = JSON.parse(JSON.stringify(r));
+  // simulate v0.9.0 entries: no reviewStatus, no transferConditions
+  delete saved.voyages[1].specializedService.transferConditions;
+  saved.voyages[1].examinerReview.serviceReview = { POLAR: { finalAcceptedDays: 10, adjustmentReason: "log" }, OIL_TRANSFER: { finalAcceptedDays: null, adjustmentReason: "" } };
+  const again = migrateRecordToV050(saved).voyages[1];
+  const sr = again.examinerReview.serviceReview;
+  assert.equal(sr.POLAR.reviewStatus, "ACCEPTED_WITH_ADJUSTMENT");
+  assert.equal(sr.POLAR.effectiveDays, 10);
+  assert.equal(sr.OIL_TRANSFER.reviewStatus, "ACCEPTED_WITH_ADJUSTMENT", "v0.9.0 automatic transfer was the whole line");
+  assert.equal(sr.OIL_TRANSFER.effectiveDays, 56);
+  assert.ok(again.metadata.legacyWarnings.includes("SERVICE_REVIEW_CONVERTED_V100"));
 });
 
 test("v0.9.0: an examiner draft with service figures survives save and reload (normalisation)", () => {
   const r = fullRecord();
-  applyExaminerReview(r.voyages[1], { reviewStatus: "ACCEPTED", serviceReview: { OIL_TRANSFER: { finalAcceptedDays: 40, adjustmentReason: "x" } } });
+  acceptLine(r.voyages[1]);
+  applyExaminerReview(r.voyages[1], { serviceReview: { POLAR: { reviewStatus: "ACCEPTED" }, OIL_TRANSFER: { reviewStatus: "ACCEPTED_WITH_ADJUSTMENT", finalAcceptedDays: 40, adjustmentReason: "x" } } });
   const again = migrateRecordToV050(JSON.parse(JSON.stringify(r)));
   assert.equal(again.voyages[1].examinerReview.serviceReview.OIL_TRANSFER.finalAcceptedDays, 40);
   assert.equal(again.voyages[1].examinerReview.serviceReview.OIL_TRANSFER.effectiveDays, 40);

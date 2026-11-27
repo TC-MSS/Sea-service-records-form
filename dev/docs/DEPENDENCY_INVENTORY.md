@@ -1,8 +1,12 @@
-# Dependency Inventory — Sea Service Records Form v0.9.0
+# Dependency Inventory — Sea Service Records Form v1.0.0
 
-Repository snapshot: `Sea-service-records-form-main` (main after v0.8.0, downloaded 2026-11-27) plus the v0.9.0 package.
+Repository snapshot: `Sea-service-records-form-main` (main after v0.9.0, downloaded 2026-11-27) plus the v1.0.0 package.
 Generated with `dev/tools/check-deps.mjs` and `dev/tools/check-syntax.mjs`, then reviewed by hand.
 Result: **all local references resolve; no missing targets.**
+
+## 0b. v1.0.0 in one paragraph
+
+No file added, moved or deleted; the reference graph is unchanged from v0.9.0. Production file changed: `index.html` (transfer days line in the summary). Shared modules changed (loaded by production): `candidate.js` (column M), `calculationEngine.js`, `dataModel.js`, `migrationEngine.js`, `validationEngine.js`, `summaryEngine.js`, `serviceVetting.js`, `recordRules.js`, `printView.js`, `examinerI18n.js`, `dev/css/examiner.css`. Development only: `dev/index.html`, `dev/examiner.html`, `dev/js/examiner.js`. Unchanged: `js/app.js`, `tp2293Engine.js`, `examinerReview.js`, `storageEngine.js`, `referenceData.js`, `dev/css/candidate.css`. The retired files in §5 are still present.
 
 ## 0a. v0.9.0 in one paragraph
 

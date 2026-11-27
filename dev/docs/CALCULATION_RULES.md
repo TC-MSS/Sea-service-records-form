@@ -1,6 +1,6 @@
-# Sea Service Calculation Rules — v0.9.0
+# Sea Service Calculation Rules — v1.0.0
 
-Rules version stored with every calculated line (`calculation.calculationRuleVersion`): `TP2293-CH3_MPR-115-117_v1.0` — unchanged in v0.7.0, v0.8.0 and v0.9.0 (`dev/js/tp2293Engine.js` was not modified).
+Rules version stored with every calculated line (`calculation.calculationRuleVersion`): `TP2293-CH3_MPR-115-117_v1.0` — unchanged in v0.7.0 to v1.0.0 (`dev/js/tp2293Engine.js` was not modified).
 
 **v0.7.0:** the production candidate form (`index.html`) now uses this same engine, through `dev/js/candidate.js`. The candidate, development and examiner pages therefore always show the same column R and column T figures. On the candidate pages the results are labelled *Unvetted sea service — subject to examiner review / Service en mer non vérifié — sous réserve de l’examen par l’examinateur*.
 
@@ -94,37 +94,52 @@ Removed: every "Lines …" count (reviewed, not reviewed, with final days, missi
 
 Shown for each special service that is selected on at least one line: Polar waters, Acceptable ice service, Passenger service, Oil / Chemical / Gas transfer, Fishing service, Dynamic positioning, Offshore service (DP and offshore counts under both).
 
-- **Line figure:** the line's counted days (above). For the ice conditions: the days the candidate entered for that condition, limited to the line's counted days (0 if no days were entered).
+- **Line figure:** the line's counted days (above) for passenger, fishing, DP and offshore. For the ice conditions and (v1.0.0) the transfer operations: the examiner's final figure for that service (§5b), which starts from the days the candidate entered, limited to the line's counted days.
 - **No duplication:** within one service, each line's figure is spread evenly over its service days (engagement day to the day before discharge, as in TP 2293 s. 3.3(4)). Where lines with the same service overlap, each calendar day counts once, at the higher daily value. Lines without dates are added as they are. The result is rounded down.
 - A line can count under several services (e.g. polar waters and oil transfer). The service totals therefore do not add up to the overall total.
 
 Example (unit test): oil transfer on 1–31 Jan (30 days) and 21 Jan–10 Feb (20 days), both accepted → 30 + 20 − 10 overlapping days = **40**.
 
-### 5b. Examiner vetting of ice and transfer-operation days (v0.9.0)
+### 5b. Examiner vetting of ice and transfer-operation days (v0.9.0, revised v1.0.0)
 
-On each line where Polar waters, Acceptable ice service or a transfer operation (oil / chemical / gas) is selected, the examiner sees one row per service: **Automatic** (the §5a figure), **Final accepted days** and **Reason**.
+On each line where Polar waters, Acceptable ice service or a transfer operation (oil / chemical / gas) is selected, the examiner sees one row per service:
 
-| Situation | Figure used for the service on that line |
+| Column | Content |
 |---|---|
-| Final accepted days blank | the automatic figure |
-| Final accepted days entered, ≤ the line's counted days | the final figure |
-| Final accepted days above the line's counted days | **error** `SERVICE_DAYS_EXCEED_LINE`; the figure is capped at the line's counted days, and **Save draft, Export JSON and Export PDF are refused** until it is corrected |
-| Negative or fractional | error `SERVICE_DAYS_INVALID`, counts 0 |
-| Line Rejected or without a status | inputs disabled and cleared; counts 0 |
+| Automatic | days the candidate entered for that service (column K or M), capped at the line's counted days; **0 when no days were entered** (v1.0.0 — transfers no longer use the whole line) |
+| Review status | **Accepted / Accepted with adjustment / Rejected** (v1.0.0). Starts as "Select a status". **Required for every service before Export JSON / PDF** (not before saving). |
+| Adjusted days | enabled only with "Accepted with adjustment" |
+| Final accepted days | the figure applicable to the service (displayed, bold green) |
+| Reason | enabled only with "Accepted with adjustment"; required (warning, red until typed) |
 
-A reason is needed (per service) when the final figure differs from the automatic one: warning `SERVICE_REASON_REQUIRED`, red until typed, never a block.
+| Service status | Final accepted days for the service |
+|---|---|
+| *(none yet)* | 0 (warning `SERVICE_STATUS_REQUIRED`) |
+| Accepted | the automatic figure |
+| Accepted with adjustment | the adjusted days, capped at the line's counted days; 0 until entered (warning `SERVICE_FINAL_REQUIRED`) |
+| Rejected | 0 |
 
-**Summary:** "Approved special service" uses the final figures (overlapping dates still counted once). When the examiner adjusted a service on any line it shows **final** (adjusted — automatic N), e.g. "Polar waters: **25** (adjusted — automatic 30)". Passenger, fishing, DP and offshore remain automatic.
+Adjusted days above the line's counted days → **error** `SERVICE_DAYS_EXCEED_LINE`: the figure is capped, and **Save draft, Export JSON and Export PDF are refused** until corrected. Negative or fractional → error `SERVICE_DAYS_INVALID`, counts 0. When the line itself is Rejected or has no status, every service input is cleared and disabled and counts 0.
 
-**JSON:** per line `examinerReview.serviceReview[code] = { automaticDays, finalAcceptedDays, adjustmentReason, effectiveDays, adjusted, overLimit, invalid, reasonMissing }`; in the summary `specialServiceApprovedDays` (final), `specialServiceAutomaticDays` and `specialServiceAdjusted`.
+**Summary:** heading **"Approved special service"** (FR "Service spécialisé approuvé") — v1.0.0 removed "(overlapping dates counted once)" from the page and the PDF; the calculation still counts overlapping dates once (§5a). When the final figure of a vetted service differs from its automatic figure on any line (after a status is chosen), it reads **final** (adjusted — automatic N), e.g. "Polar waters: **25** (adjusted — automatic 30)". Passenger, fishing, DP and offshore remain automatic.
 
-## 6. Column K — ice service (v0.7.0)
+**JSON:** per line `examinerReview.serviceReview[code] = { reviewStatus, automaticDays, finalAcceptedDays, adjustmentReason, effectiveDays, enabled, adjusted, overLimit, invalid, reasonMissing }`; in the summary `specialServiceApprovedDays` (final), `specialServiceAutomaticDays`, `specialServiceAdjusted`.
+
+**Records saved before v1.0.0 (kept loading, tested):**
+
+- Column M single type (`transferOperation`) → that type ticked in `transferConditions`, days blank.
+- v0.9.0 service reviews (no status) keep the examiner's figure: the v0.9.0 figure (final days if entered, otherwise the v0.9.0 automatic figure — ice days capped; transfer = whole line) → "Accepted" if equal to the new automatic figure, otherwise "Accepted with adjustment" with that figure (reason "Converted from v0.9.0" if none). The line shows `SERVICE_REVIEW_CONVERTED_V100`.
+- A v0.9.0 *candidate* record with a transfer type but no days now gives an automatic transfer figure of 0; the examiner sets it with "Accepted with adjustment".
+
+## 6. Columns K and M — ice service (v0.7.0) and transfer operations (v1.0.0)
 
 Column K keeps the two conditions (Polar waters; Acceptable ice service). Both can be selected, and each has its own number of days entered by the candidate. Typing days ticks the condition; unticking clears the days.
 
 Stored as `specializedService.iceConditions = { POLAR: {selected, days}, ACCEPTABLE_ICE: {selected, days} }`. The older single code `specializedService.iceService` (NONE / POLAR / ACCEPTABLE_ICE / POLAR_AND_ACCEPTABLE_ICE) is still written, derived from the selection, so older tools keep reading it. Older records convert to selected conditions with days blank.
 
-Checks: condition selected without days → warning `ICE_DAYS_NOT_STATED`; days above days on board → error `ICE_DAYS_EXCEED_ONBOARD`; negative or fractional days → error `ICE_DAYS_INVALID`. The ice days are not converted and do not change column T; they are totalled in the summary ("Polar waters (days entered)", "Acceptable ice service (days entered)") for the examiner. The two conditions may overlap, so no combined limit is applied.
+**Column M (v1.0.0)** works the same way: Oil / Chemical / Gas transfer can each be ticked, with an optional number of days of transfer operations. Stored as `specializedService.transferConditions = { OIL_TRANSFER, CHEMICAL_TRANSFER, GAS_TRANSFER: {selected, days} }`; the older single code `transferOperation` is still written (first ticked type, or NONE). Checks: `TRANSFER_DAYS_NOT_STATED` (warning), `TRANSFER_DAYS_EXCEED_ONBOARD`, `TRANSFER_DAYS_INVALID` (errors). Totals in the summary: "Transfer operations (days entered): Oil transfer n / Chemical transfer n / Gas transfer n".
+
+Checks (ice): condition selected without days → warning `ICE_DAYS_NOT_STATED`; days above days on board → error `ICE_DAYS_EXCEED_ONBOARD`; negative or fractional days → error `ICE_DAYS_INVALID`. The ice days are not converted and do not change column T; they are totalled in the summary ("Polar waters (days entered)", "Acceptable ice service (days entered)") for the examiner. The two conditions may overlap, so no combined limit is applied.
 
 ## 7. Export requirements and file names (v0.9.0)
 
@@ -141,13 +156,13 @@ Export JSON and Export PDF / Print are refused, with a list of what to fix, unti
 | Deck | Master, Chief Mate, Watchkeeping Mate (all), Fishing Master 1–4, Able Seafarer, Bridge Watch Rating | A capacity, B vessel, C official number, D vessel type, **G gross tonnage, H class of voyage**, I port of registry, J watch, P engagement, Q discharge, S days at sea |
 | Engine | Engineer 1st–4th class (motor / steam), Watchkeeping Engineer fishing, SVMO, Engine-room Rating | A, B, C, D, **E main engine power (kW)**, I, J, P, Q, S |
 
-- no ice-condition days exceed the line's days on board (`ICE_DAYS_EXCEED_ONBOARD`). Ice days themselves are optional. The excess is highlighted on the line (red ice-days box, red column R, message "More than days on board (n)") as the candidate types.
+- no special-service days exceed the line's days on board — ice conditions (`ICE_DAYS_EXCEED_ONBOARD`) and, from v1.0.0, transfer operations (`TRANSFER_DAYS_EXCEED_ONBOARD`). The days themselves are optional. The excess is highlighted on the line (red days box, red column R, message "More than days on board (n)"), listed in the Findings and in the "Export blocked" message, and rechecked as the candidate types or changes the dates.
 
 Save (in the browser) is always allowed. The application date is filled with today's date when empty and stays editable.
 
 ### Examiner
 
-Export JSON and Export PDF / Print are refused until the examiner name is entered and, **on every line**, a review status is chosen and all five verification boxes are ticked, and no line has invalid values (including a service figure above the line's counted days). The review date shows today's date automatically (read-only) and is saved in `examinerAssessment.reviewDate`.
+Export JSON and Export PDF / Print are refused until the examiner name is entered and, **on every line**, a review status is chosen, all five verification boxes are ticked and (v1.0.0) every special service has a review status, and no line has invalid values (including a service figure above the line's counted days). The review date shows today's date automatically (read-only) and is saved in `examinerAssessment.reviewDate`.
 
 ### File names
 
@@ -171,7 +186,7 @@ FROM = earliest engagement date, TO = latest discharge date on the record. Surna
 
 *The acronyms are a proposal; confirm or correct them (`dev/js/recordRules.js`, `CERTIFICATE_INFO`).*
 
-## 8. Decisions still to confirm (not implemented in v0.9.0)
+## 8. Decisions still to confirm (not implemented in v1.0.0)
 
 These points are interpretations made for this build. Please confirm them with the examination unit:
 
@@ -179,6 +194,6 @@ These points are interpretations made for this build. Please confirm them with t
 2. **Rounding down** to whole days, rather than rounding to nearest (the old production calculator used rounding to nearest).
 3. **Choice of method.** The days-under-way method (s. 3.7) is applied whenever column S differs from R. If the vessel carried passengers or cargo, the examiner should use "Accepted with adjustment" and enter the final accepted days (the examiner basis was removed in v0.8.0).
 4. **Junior officer.** MPR s. 117 is applied to the capacity "Supernumerary Mate" for every certificate type. The section refers to Master or Mate certificates.
-5. **Backward compatibility (v0.9.0):** you said older records need not be guaranteed for this release; the existing conversion code was kept and still loads them, but it was not extended or re-verified beyond the existing tests. Ask again for the next version.
+5. **Backward compatibility (confirmed for v1.0.0):** records saved by v0.4–v0.9 load without losing any figure (§5b). Ask again for the next version.
 6. **Passenger, fishing, DP and offshore** — should they also get examiner-adjustable figures?
 7. **Not yet implemented:** pilot service (s. 3.16, 2/3 up to 3 months), Canadian Forces rates (Table II), MOU Tables III–VI, approved training program remission (s. 3.22), fitting-out / lay-up / refit limits in the certificate tables, and certificate eligibility (minimum tonnage, voyage class, kW, months per certificate).

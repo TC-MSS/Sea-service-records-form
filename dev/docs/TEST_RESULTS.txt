@@ -1,4 +1,4 @@
-Test run: 2026-11-27T13:27Z  Node v22.23.5  Package 0.9.0
+Test run: 2026-11-27T14:17Z  Node v22.23.5  Package 1.0.0
 
 == Syntax ==
 OK   data/certificates.json
@@ -53,12 +53,10 @@ OK   records.html  WARNING: <!DOCTYPE html> is not the first token (quirks mode)
 All syntax checks passed.
 
 == Dependencies ==
-Unreferenced files (19):
+Unreferenced files (17):
   - data/certificates.json
   - data/vesselThresholds.json
   - data/voyages.json
-  - dev/tests/smoke-candidate.png
-  - dev/tests/smoke-examiner.png
   - js/1calculationEngine.js
   - js/1dataModel.js
   - js/1examinerReview.js
@@ -102,7 +100,10 @@ All local references resolve. OK
 ✔ v0.9.0 item 3: ice days above days on board block the candidate export; blank ice days do not
 ✔ v0.9.0 item 9: export file name, acronyms and date range
 ✔ v0.9.0 item 8: NC1 / NC2 spelled out as Near Coastal
-✔ v0.9.0 items 1–2: examiner vets ice and transfer days; over-limit is an error, summary shows final + automatic
+✔ v1.0.0 item 2: review status per special service; final accepted days per service; over-limit error
+✔ v1.0.0 item 1: column M — several transfer types, each with days; days above days on board block export
+✔ v1.0.0 item 1: ticked service without days → automatic 0
+✔ v1.0.0: v0.9.0 service reviews keep the examiner's figure
 ✔ v0.9.0: an examiner draft with service figures survives save and reload (normalisation)
 ✔ R1 TP 2293 3.3(1),(4) Table 1 (A): discharge − engagement, minimum 1
 ✔ R2 MPR 115(1): 8-hour watch, 1 day = 1 day
@@ -121,14 +122,14 @@ All local references resolve. OK
 ✔ TP 2293 3.25: barge — deck service manual review, engine service calculated
 ✔ explanations are produced in both languages with references
 ✔ missing dates → not calculated, null
-ℹ tests 44
+ℹ tests 47
 ℹ suites 0
-ℹ pass 44
+ℹ pass 47
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 126.773496
+ℹ duration_ms 131.50175
 
 == Smoke tests (Playwright / Chromium) ==
 PASS  production index.html loads without script errors or 404s; old calculator not loaded
@@ -142,6 +143,7 @@ PASS  v0.9.0 items 6 and 8: reminder next to the export buttons; NC1 spelled out
 PASS  v0.8.0/v0.9.0: export blocked without the declaration and mandatory fields (S days at sea); caution shown
 PASS  v0.9.0 item 7: mandatory columns follow the certificate department (deck vs engine)
 PASS  v0.9.0 item 3: ice days above days on board highlighted on the line and blocking export
+PASS  v1.0.0 item 1: column M — several transfer types with days; days above days on board highlighted and blocking export
 PASS  v0.9.0 item 9: Export JSON named CDN - SURNAME - UNVETTED QUALIFYING SEA SERVICE - acronym - total and dates
 PASS  production Import JSON re-opens a file (pre-0.4 file converted)
 PASS  production loads a record saved by the v0.6.0 development candidate form
@@ -163,9 +165,9 @@ PASS  v0.8.0 items 5–6: summary — bold total with certificate, reduced list,
 PASS  French: labels, capacity, certificate, months, input preserved across language switch
 PASS  save stores 0.5.0 draft separately; candidate record untouched
 PASS  reload restores the examiner draft
-PASS  v0.9.0 item 1: vet ice and transfer-operation days per line (over-limit = error that blocks save)
-PASS  v0.9.0 item 2: examiner determination shows final service figures with the automatic one when adjusted
-PASS  v0.9.0 items 9–10: complete the mandatory examiner fields → VETTED JSON with both service figures
+PASS  v1.0.0 item 2: review status per special service; final accepted days per service; over-limit blocks save
+PASS  v1.0.0 item 2: examiner determination shows final service figures with the automatic one when adjusted
+PASS  v0.9.0/v1.0.0: complete the mandatory examiner fields → VETTED JSON with service statuses and figures
 PASS  examiner Export PDF / Print copy: bold total with certificate, special services
 PASS  examiner draft saved by v0.7.0 (Accepted with final days ≠ converted) loads as 'Accepted with adjustment'
 PASS  import pre-0.4 JSON: legacy positionVerified/seaServiceVerified/polar/ice/DP/offshore/tanker
@@ -175,4 +177,4 @@ PASS  candidate form: French labels and manual review display
 PASS  candidate save uses its own key; examiner loads it with calculated days
 PASS  no uncaught script errors during the dev session
 
-43/43 smoke tests passed.
+44/44 smoke tests passed.

@@ -1,5 +1,5 @@
 /**
- * Print / PDF view — v0.9.0 (shared by the production and development pages).
+ * Print / PDF view — v1.0.0 (shared by the production and development pages).
  *
  * "Export PDF / Print" builds a clean, read-only copy of the record in #printView
  * and opens the browser's print window; the user chooses "Save as PDF" to create
@@ -16,18 +16,21 @@ const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${Str
 const num = (n, lang) => (lang === "fr" ? String(n).replace(".", ",") : String(n));
 
 /** Column K text: each selected ice condition with its days, e.g. "Polar waters: 12 d". */
-export function iceText(v, lang) {
-  const c = v.specializedService?.iceConditions || {};
-  return ENUMS.iceConditions.filter((code) => c[code]?.selected)
+export function iceText(v, lang, group = "iceConditions", codes = ENUMS.iceConditions) {
+  const c = v.specializedService?.[group] || {};
+  return codes.filter((code) => c[code]?.selected)
     .map((code) => `${t(lang, code)}: ${c[code].days === null || c[code].days === undefined ? "?" : t(lang, "iceDaysShort", { n: c[code].days })}`);
 }
+/** Column M text (v1.0.0): each selected transfer type with its days. */
+export const transferText = (v, lang) => iceText(v, lang, "transferConditions", ENUMS.transferConditions);
 
 /** Columns K–O as a list of short texts. */
 export function specializedParts(v, lang) {
   const s = v.specializedService;
   const parts = [...iceText(v, lang)];
   if (s.passengerService) parts.push(t(lang, "passengerService"));
-  if (s.transferOperation && s.transferOperation !== "NONE") parts.push(t(lang, s.transferOperation));
+  if (s.transferConditions) parts.push(...transferText(v, lang));
+  else if (s.transferOperation && s.transferOperation !== "NONE") parts.push(t(lang, s.transferOperation));
   if (s.fishingService) parts.push(t(lang, "fishingService"));
   if (s.dpOffshoreService && s.dpOffshoreService !== "NONE") parts.push(t(lang, s.dpOffshoreService));
   return parts;
@@ -108,8 +111,9 @@ export function examinerPrintHtml(record, summary, lang) {
       .map((k) => `${r[k] ? "☒" : "☐"} ${esc(t(lang, k))}`).join(" &nbsp; ");
     const status = r.reviewStatus === "NOT_REVIEWED" ? "—" : t(lang, r.reviewStatus);
     // v0.9.0 — special-service vetting: "Polar waters: 30 → 25 (reason)"
+    // v1.0.0: "Polar waters — Accepted with adjustment: 30 → 25 (reason)"
     const svc = Object.entries(r.serviceReview || {}).map(([code, e]) =>
-      `${esc(t(lang, code))}: ${e.adjusted ? `${esc(e.automaticDays)} → <strong>${esc(e.effectiveDays)}</strong>${e.adjustmentReason ? ` (${esc(e.adjustmentReason)})` : ""}` : `<strong>${esc(e.effectiveDays)}</strong>`}`).join("<br>");
+      `${esc(t(lang, code))} — ${esc(e.reviewStatus ? t(lang, e.reviewStatus) : "—")}: ${e.adjusted ? `${esc(e.automaticDays)} → <strong>${esc(e.effectiveDays)}</strong>${e.adjustmentReason ? ` (${esc(e.adjustmentReason)})` : ""}` : `<strong>${esc(e.effectiveDays)}</strong>`}`).join("<br>");
     return `<tr><td>${i + 1}</td><td>${esc(status)}</td>
       <td class="n">${r.referenceDays === null ? esc(t(lang, "notCalculated")) : esc(r.referenceDays)}</td><td class="n">${dash(r.finalAcceptedDays)}</td><td class="n"><strong>${esc(r.effectiveAcceptedDays)}</strong></td>
       <td>${dash(r.adjustmentReason)}</td><td>${svc || "—"}</td><td>${dash(r.examinerComments)}</td></tr>
