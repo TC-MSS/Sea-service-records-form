@@ -1,5 +1,5 @@
 /**
- * Validation engine — v0.9.0.
+ * Validation engine — v1.0.0.
  * Returns codes; the UI translates them (see examinerI18n.js).
  * Certificate eligibility is intentionally out of scope for this build.
  * Conversion (TP 2293) warnings are surfaced as line warnings.
@@ -29,19 +29,24 @@ export function validateVoyage(voyage) {
   return { valid: errors.length === 0, errors, warnings };
 }
 
-/** Column K (v0.7.0): days entered for each selected ice condition. */
+/** Column K (v0.7.0) and column M (v1.0.0): days entered for each selected ice condition / transfer type. */
 export function iceIssues(voyage) {
   const errors = [];
   const warnings = [];
-  const conditions = voyage.specializedService?.iceConditions || {};
   const onBoard = voyage.dates.daysOnBoard;
   const add = (list, code) => { if (!list.includes(code)) list.push(code); };
-  for (const code of ENUMS.iceConditions) {
-    const c = conditions[code];
-    if (!c || !c.selected) continue;
-    if (c.days === null || c.days === undefined) { add(warnings, "ICE_DAYS_NOT_STATED"); continue; }
-    if (c.days < 0 || !Number.isInteger(c.days)) { add(errors, "ICE_DAYS_INVALID"); continue; }
-    if (onBoard !== null && onBoard !== undefined && c.days > onBoard) add(errors, "ICE_DAYS_EXCEED_ONBOARD");
+  const groups = [
+    ["ICE", voyage.specializedService?.iceConditions || {}, ENUMS.iceConditions],
+    ["TRANSFER", voyage.specializedService?.transferConditions || {}, ENUMS.transferConditions]
+  ];
+  for (const [prefix, conditions, codes] of groups) {
+    for (const code of codes) {
+      const c = conditions[code];
+      if (!c || !c.selected) continue;
+      if (c.days === null || c.days === undefined) { add(warnings, `${prefix}_DAYS_NOT_STATED`); continue; }
+      if (c.days < 0 || !Number.isInteger(c.days)) { add(errors, `${prefix}_DAYS_INVALID`); continue; }
+      if (onBoard !== null && onBoard !== undefined && c.days > onBoard) add(errors, `${prefix}_DAYS_EXCEED_ONBOARD`);
+    }
   }
   return { errors, warnings };
 }
@@ -65,6 +70,8 @@ export function validateExaminerReview(voyage) {
   // Warnings: shown clearly, never block saving.
   if (reasonMissing(voyage)) warnings.push("ADJUSTMENT_REASON_REQUIRED");
   if (services.some((e) => e.reasonMissing)) warnings.push("SERVICE_REASON_REQUIRED");
+  if (services.some((e) => e.enabled && !e.reviewStatus)) warnings.push("SERVICE_STATUS_REQUIRED");
+  if (services.some((e) => e.reviewStatus === "ACCEPTED_WITH_ADJUSTMENT" && e.finalAcceptedDays === null)) warnings.push("SERVICE_FINAL_REQUIRED");
   if (r.reviewStatus === "ACCEPTED_WITH_ADJUSTMENT" && final === null) warnings.push("FINAL_ACCEPTED_DAYS_REQUIRED");
   if (r.reviewStatus === "ACCEPTED" && r.referenceDays === null) warnings.push("ACCEPTED_WITHOUT_CONVERTED_DAYS");
   if (r.reviewStatus === "ADDITIONAL_INFORMATION_REQUIRED" && final !== null) warnings.push("FINAL_DAYS_PENDING_INFORMATION");
@@ -86,5 +93,6 @@ export function reasonMissing(voyage) {
 
 export function voyageHasSpecializedService(voyage) {
   const s = voyage.specializedService;
-  return s.iceService !== "NONE" || s.passengerService || s.transferOperation !== "NONE" || s.fishingService || s.dpOffshoreService !== "NONE";
+  const transfer = Object.values(s.transferConditions || {}).some((c) => c?.selected) || (s.transferOperation && s.transferOperation !== "NONE");
+  return s.iceService !== "NONE" || s.passengerService || transfer || s.fishingService || s.dpOffshoreService !== "NONE";
 }

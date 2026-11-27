@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = "0.5.0";
-export const APPLICATION_VERSION = "0.9.0";
+export const APPLICATION_VERSION = "1.0.0";
 
 export const ENUMS = Object.freeze({
   recordStatus: ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "ADDITIONAL_INFORMATION_REQUIRED", "ASSESSMENT_COMPLETED", "CLOSED"],
@@ -9,6 +9,10 @@ export const ENUMS = Object.freeze({
   iceService: ["NONE", "POLAR", "ACCEPTABLE_ICE", "POLAR_AND_ACCEPTABLE_ICE"],
   /** v0.7.0 — column K conditions; several may be selected, each with its own number of days. */
   iceConditions: ["POLAR", "ACCEPTABLE_ICE"],
+  /** v1.0.0 — column M conditions; several may be selected, each with its own number of days. */
+  transferConditions: ["OIL_TRANSFER", "CHEMICAL_TRANSFER", "GAS_TRANSFER"],
+  /** v1.0.0 — review status per special service (examiner). "" = not yet chosen. */
+  serviceReviewStatus: ["ACCEPTED", "ACCEPTED_WITH_ADJUSTMENT", "REJECTED"],
   transferOperation: ["NONE", "OIL_TRANSFER", "CHEMICAL_TRANSFER", "GAS_TRANSFER"],
   dpOffshoreService: ["NONE", "DP", "OFFSHORE", "DP_AND_OFFSHORE"],
   conversionStatus: ["NOT_CALCULATED", "NOT_APPLICABLE", "CALCULATED", "MANUAL_REVIEW_REQUIRED", "CALCULATION_ERROR"],
@@ -76,6 +80,23 @@ export function iceConditionsFromService(code = "NONE") {
   return c;
 }
 
+/** Column M (v1.0.0): one entry per transfer type — selected flag and days of transfer operations. */
+export function createTransferConditions() {
+  return Object.fromEntries(ENUMS.transferConditions.map((code) => [code, { selected: false, days: null }]));
+}
+
+/** Single legacy code (first selected type, or NONE), kept in step for older tools. */
+export function transferOperationFromConditions(conditions = {}) {
+  return ENUMS.transferConditions.find((code) => conditions[code]?.selected) || "NONE";
+}
+
+/** Conditions from the legacy single code (days unknown → null). */
+export function transferConditionsFromOperation(code = "NONE") {
+  const c = createTransferConditions();
+  if (c[code]) c[code].selected = true;
+  return c;
+}
+
 export function createVoyage(sequenceNumber = 1) {
   const now = new Date().toISOString();
   return {
@@ -93,7 +114,7 @@ export function createVoyage(sequenceNumber = 1) {
       daysAtSeaEntered: null, daysAtSeaEffective: null, daysAtSeaDifferent: false
     },
     specializedService: {
-      iceService: "NONE", iceConditions: createIceConditions(), passengerService: false, transferOperation: "NONE",
+      iceService: "NONE", iceConditions: createIceConditions(), passengerService: false, transferOperation: "NONE", transferConditions: createTransferConditions(),
       fishingService: false, dpOffshoreService: "NONE", supportingDetails: ""
     },
     calculation: {

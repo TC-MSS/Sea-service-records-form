@@ -144,3 +144,8 @@ tr.reviewRow > td{ padding:0 0 14px 0; border-left:4px solid #003366; background
 input.missingField, select.missingField{ border:2px solid #b00020 !important; background:#fff5f5 !important; }
 .verifyGrid label.missingCheck{ color:#b00020; font-weight:600; }
 .blockList{ margin:6px 0 0; padding-left:18px; }
+
+/* v1.0.0 — review status per special service */
+.svcTable select{ min-width:170px; }
+.svcTable td.svcCounted{ font-weight:700; color:#0b5d1e; }
+.svcTable select.missingField{ border:2px solid #b00020 !important; background:#fff5f5 !important; }

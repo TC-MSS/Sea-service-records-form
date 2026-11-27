@@ -1,4 +1,17 @@
-# Sea Service Records Form — v0.9.0
+# Sea Service Records Form — v1.0.0
+
+## What changed in v1.0.0
+
+1. Candidate column M: Oil / Chemical / Gas transfer tick boxes, each with optional days; transfer (and ice) days above the line's days on board are red, listed in Findings and block Export JSON / PDF.
+2. Examiner: review status per special service (Accepted / Accepted with adjustment / Rejected), adjusted days and reason only with adjustment, final accepted days per service displayed; a status for every service is required before export. Automatic figure = candidate's days (0 when none).
+3. Summary heading "Approved special service" (no "overlapping dates counted once").
+4. Records saved by v0.4–v0.9 keep loading (single transfer type → ticked; v0.9.0 service figures kept).
+
+Tests: 47 unit, 44 smoke.
+
+---
+
+# v0.9.0 notes
 
 ## What changed in v0.9.0
 
@@ -81,9 +94,9 @@ Also, with no basis, the final days were never compared with anything (`adjustme
 ```
 node tools/check-syntax.mjs ..
 node tools/check-deps.mjs ..
-node --test tests/model.test.mjs tests/tp2293.test.mjs     # 44 unit tests
+node --test tests/model.test.mjs tests/tp2293.test.mjs     # 47 unit tests
 npm i -D playwright && npx playwright install chromium
-node tests/smoke.mjs                                       # 43 browser smoke tests (production page included)
+node tests/smoke.mjs                                       # 44 browser smoke tests (production page included)
 ```
 
 `npm test` runs all of them. Latest results: `docs/TEST_RESULTS.txt`. The smoke test writes `tests/smoke-*.png` screenshots; do not commit them.

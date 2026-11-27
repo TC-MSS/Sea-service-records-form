@@ -1,5 +1,6 @@
 /**
- * Candidate form controller — v0.9.0.
+ * Candidate form controller — v1.0.0 (column M: transfer types with days; days above R block export).
+ * v0.9.0:
  * v0.9.0: mandatory fields by certificate department (EXN 2), ice days above days on board
  * highlighted on the line and blocking export, "Days at sea" mandatory, file names
  * "CDN - SURNAME - UNVETTED QUALIFYING SEA SERVICE - …", application date defaults to today,
@@ -37,7 +38,6 @@ let lastStatus = null;
 const variant = () => (document.body.dataset.variant === "production" ? "production" : "development");
 const titleKey = () => (variant() === "production" ? "productionPageTitle" : "candidatePageTitle");
 
-const TRANSFER = [["NONE", "none"], ["OIL_TRANSFER", "OIL_TRANSFER"], ["CHEMICAL_TRANSFER", "CHEMICAL_TRANSFER"], ["GAS_TRANSFER", "GAS_TRANSFER"]];
 const DPO = [["NONE", "none"], ["DP", "DP"], ["OFFSHORE", "OFFSHORE"], ["DP_AND_OFFSHORE", "DP_AND_OFFSHORE"]];
 const NUMERIC = new Set(["vessel.propulsionPowerKw", "vessel.grossTonnage", "service.watchHours", "dates.daysAtSeaEntered"]);
 
@@ -103,7 +103,7 @@ function rowHtml(v, i) {
         <option value="12"${Number(watch) === 12 ? " selected" : ""}>12</option></select></td>
     <td class="iceCell">${iceCellHtml(v)}</td>
     <td class="center"><input type="checkbox" data-path="specializedService.passengerService"${v.specializedService.passengerService ? " checked" : ""}></td>
-    <td><select data-path="specializedService.transferOperation">${keyOptions(TRANSFER, v.specializedService.transferOperation)}</select></td>
+    <td class="iceCell transferCell">${iceCellHtml(v, "transferConditions", ENUMS.transferConditions)}</td>
     <td class="center"><input type="checkbox" data-path="specializedService.fishingService"${v.specializedService.fishingService ? " checked" : ""}></td>
     <td><select data-path="specializedService.dpOffshoreService">${keyOptions(DPO, v.specializedService.dpOffshoreService)}</select></td>
     <td><input type="date" data-path="dates.embarkationDate" value="${val("dates.embarkationDate")}"></td>
@@ -118,13 +118,13 @@ function rowHtml(v, i) {
  * Column K (v0.7.0): the ice conditions may be combined; each selected condition
  * has its own number of days. Typing days ticks the condition; unticking clears the days.
  */
-function iceCellHtml(v) {
-  const c = v.specializedService.iceConditions || {};
-  return ENUMS.iceConditions.map((code) => {
+function iceCellHtml(v, group = "iceConditions", codes = ENUMS.iceConditions) {
+  const c = v.specializedService[group] || {};
+  return codes.map((code) => {
     const item = c[code] || { selected: false, days: null };
     return `<div class="iceOption" data-ice="${code}">
-      <label><input type="checkbox" data-path="specializedService.iceConditions.${code}.selected"${item.selected ? " checked" : ""}> ${esc(t(language, code))}</label>
-      <input type="number" min="0" step="1" inputmode="numeric" class="iceDays" data-path="specializedService.iceConditions.${code}.days"
+      <label><input type="checkbox" data-path="specializedService.${group}.${code}.selected"${item.selected ? " checked" : ""}> ${esc(t(language, code))}</label>
+      <input type="number" min="0" step="1" inputmode="numeric" class="iceDays" data-path="specializedService.${group}.${code}.days"
         value="${item.days ?? ""}" aria-label="${esc(t(language, code))} — ${esc(t(language, "iceDaysLabel"))}" placeholder="${esc(t(language, "iceDaysLabel"))}"></div>`;
   }).join("");
 }
@@ -185,6 +185,7 @@ function refresh() {
   $("sumJuniorExcess").textContent = ac.juniorOfficerExcessDays;
   $("sumPolarDays").textContent = s.specializedService.polarDays;
   $("sumIceDays").textContent = s.specializedService.acceptableIceDays;
+  $("sumTransferDays").textContent = transferDaysText(s.specializedService);
 
   const items = [];
   record.voyages.forEach((v, i) => {
@@ -264,8 +265,14 @@ function save() {
   setStatus("recordSaved");
 }
 
+/** v1.0.0 — "Oil 12 / Chemical 0 / Gas 0" (days entered in column M). */
+function transferDaysText(sp) {
+  return [["OIL_TRANSFER", sp.oilTransferDays], ["CHEMICAL_TRANSFER", sp.chemicalTransferDays], ["GAS_TRANSFER", sp.gasTransferDays]]
+    .map(([code, n]) => `${t(language, code)} ${n ?? 0}`).join(" / ");
+}
+
 /**
- * v0.9.0 — Column K: ice days above the line's days on board are highlighted on the line
+ * v0.9.0 — Column K (v1.0.0: and column M): special-service days above the line's days on board are highlighted on the line
  * (ice-days box, column R and a short message in the cell), updated as the candidate types.
  */
 function markIceExceeding(row, v) {

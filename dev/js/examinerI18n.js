@@ -5,7 +5,7 @@
  */
 export const TEXT = Object.freeze({
   en: {
-    pageTitle: "Sea Service Records — Examiner Review (development v0.9.0)",
+    pageTitle: "Sea Service Records — Examiner Review (development v1.0.0)",
     devBanner: "Development build — converted days are calculated automatically (TP 2293 Ch. 3, MPR ss. 115–117) and must be verified. Certificate eligibility is not yet calculated.",
     recordActions: "Record",
     loadCandidate: "Load candidate record (this browser)",
@@ -136,7 +136,7 @@ export const TEXT = Object.freeze({
 
     // --- candidate form ---
     iceService: "K<br>Ice", passenger: "L<br>Passenger", transferOperation: "M<br>Transfer operation", fishing: "N<br>Fishing", dpOffshore: "O<br>DP / Offshore",
-    candidatePageTitle: "Statement of Sea Service for a Certificate (development v0.9.0)",
+    candidatePageTitle: "Statement of Sea Service for a Certificate (development v1.0.0)",
     candidateBanner: "Development build. Converted days are calculated automatically under TP 2293 Chapter 3 and MPR sections 115 to 117 and are subject to examiner review.",
     addVoyage: "Add voyage", deleteLine: "Delete", actions: "Actions",
     official: "Official", deck: "Deck Department", engine: "Engine Department",
@@ -200,7 +200,7 @@ export const TEXT = Object.freeze({
     declarationRequired: "Export blocked: tick the Applicant Declaration first (mandatory).",
     declarationRequiredPrint: "This record cannot be printed or saved as PDF: the Applicant Declaration has not been ticked.",
     certificateForTotal: "Certificate applied for",
-    specialServiceApproved: "Approved special service (overlapping dates counted once)",
+    specialServiceApproved: "Approved special service",
     PASSENGER: "Passenger service", FISHING: "Fishing service",
     ACCEPTED_WITHOUT_CONVERTED_DAYS: "Accepted, but converted days could not be calculated for this line: it counts 0. Use “Accepted with adjustment” and enter the final accepted days.",
     REVIEW_STATUS_CONVERTED_V080: "Review saved by an earlier version was converted to the v0.8.0 rules (final accepted days are kept only with “Accepted with adjustment” or “Additional information required”).",
@@ -232,10 +232,22 @@ export const TEXT = Object.freeze({
     lineStatusRequired: "Line {n}: select a review status.",
     lineVerificationRequired: "Line {n}: tick all five verification boxes.",
     lineServiceOverLimit: "Line {n}: a special-service figure exceeds the line's counted days.",
-    lineHasErrors: "Line {n}: correct the invalid values."
+    lineHasErrors: "Line {n}: correct the invalid values.",
+    // --- v1.0.0 ---
+    transferDays: "Transfer operations (days entered)",
+    TRANSFER_DAYS_NOT_STATED: "Transfer operation selected without a number of days (optional): the examiner will count 0 transfer days for this line unless adjusted.",
+    TRANSFER_DAYS_EXCEED_ONBOARD: "Days of transfer operations exceed the days on board (column M). Correct them before exporting.",
+    TRANSFER_DAYS_INVALID: "Days of transfer operations must be a whole number of 0 or more (column M).",
+    serviceStatus: "Review status",
+    serviceCounted: "Final accepted days",
+    serviceFinalInput: "Adjusted days",
+    SERVICE_STATUS_REQUIRED: "Choose a review status for each special service on this line (required before export).",
+    SERVICE_FINAL_REQUIRED: "Special service accepted with adjustment: enter the adjusted days (counts 0 until entered).",
+    SERVICE_REVIEW_CONVERTED_V100: "Special-service review saved by v0.9.0 was converted to the v1.0.0 statuses; the examiner's figure is kept.",
+    lineServiceStatusRequired: "Line {n}: choose a review status for each special service."
   },
   fr: {
-    pageTitle: "États de service en mer — Examen par l’examinateur (développement v0.9.0)",
+    pageTitle: "États de service en mer — Examen par l’examinateur (développement v1.0.0)",
     devBanner: "Version de développement — les jours convertis sont calculés automatiquement (TP 2293, ch. 3; RPM, art. 115 à 117) et doivent être vérifiés. L’admissibilité au brevet n’est pas encore calculée.",
     recordActions: "Dossier",
     loadCandidate: "Charger le dossier du candidat (ce navigateur)",
@@ -363,7 +375,7 @@ export const TEXT = Object.freeze({
     DAYS_ON_BOARD_REQUIRED: "Les dates d’engagement et de congédiement sont requises pour calculer cette ligne.",
 
     iceService: "K<br>Glaces", passenger: "L<br>Passagers", transferOperation: "M<br>Opération de transfert", fishing: "N<br>Pêche", dpOffshore: "O<br>DP / au large",
-    candidatePageTitle: "État de service en mer pour un brevet (développement v0.9.0)",
+    candidatePageTitle: "État de service en mer pour un brevet (développement v1.0.0)",
     candidateBanner: "Version de développement. Les jours convertis sont calculés automatiquement selon le chapitre 3 de la TP 2293 et les articles 115 à 117 du RPM, sous réserve de l’examen par l’examinateur.",
     addVoyage: "Ajouter un voyage", deleteLine: "Supprimer", actions: "Actions",
     official: "Officiel", deck: "Service du pont", engine: "Service des machines",
@@ -426,7 +438,7 @@ export const TEXT = Object.freeze({
     declarationRequired: "Exportation bloquée : cochez d’abord la déclaration du candidat (obligatoire).",
     declarationRequiredPrint: "Ce dossier ne peut pas être imprimé ni enregistré en PDF : la déclaration du candidat n’a pas été cochée.",
     certificateForTotal: "Brevet demandé",
-    specialServiceApproved: "Service spécialisé approuvé (dates chevauchantes comptées une seule fois)",
+    specialServiceApproved: "Service spécialisé approuvé",
     PASSENGER: "Service à passagers", FISHING: "Service de pêche",
     ACCEPTED_WITHOUT_CONVERTED_DAYS: "Accepté, mais les jours convertis n’ont pas pu être calculés pour cette ligne : elle compte pour 0. Utilisez « Accepté avec rajustement » et inscrivez les jours finaux acceptés.",
     REVIEW_STATUS_CONVERTED_V080: "Examen enregistré par une version antérieure converti selon les règles v0.8.0 (les jours finaux acceptés ne sont conservés qu’avec « Accepté avec rajustement » ou « Renseignements supplémentaires requis »).",
@@ -458,7 +470,19 @@ export const TEXT = Object.freeze({
     lineStatusRequired: "Ligne {n} : sélectionnez un statut d’examen.",
     lineVerificationRequired: "Ligne {n} : cochez les cinq cases de vérification.",
     lineServiceOverLimit: "Ligne {n} : un chiffre de service spécialisé dépasse les jours comptés de la ligne.",
-    lineHasErrors: "Ligne {n} : corrigez les valeurs invalides."
+    lineHasErrors: "Ligne {n} : corrigez les valeurs invalides.",
+    // --- v1.0.0 ---
+    transferDays: "Opérations de transfert (jours inscrits)",
+    TRANSFER_DAYS_NOT_STATED: "Opération de transfert cochée sans nombre de jours (facultatif) : l’examinateur comptera 0 jour de transfert pour cette ligne, sauf rajustement.",
+    TRANSFER_DAYS_EXCEED_ONBOARD: "Les jours d’opérations de transfert dépassent les jours à bord (colonne M). Corrigez-les avant d’exporter.",
+    TRANSFER_DAYS_INVALID: "Les jours d’opérations de transfert doivent être un nombre entier égal ou supérieur à 0 (colonne M).",
+    serviceStatus: "Statut de l’examen",
+    serviceCounted: "Jours finaux acceptés",
+    serviceFinalInput: "Jours rajustés",
+    SERVICE_STATUS_REQUIRED: "Choisissez un statut d’examen pour chaque service spécialisé de cette ligne (obligatoire avant l’exportation).",
+    SERVICE_FINAL_REQUIRED: "Service spécialisé accepté avec rajustement : inscrivez les jours rajustés (compte pour 0 d’ici là).",
+    SERVICE_REVIEW_CONVERTED_V100: "Examen de service spécialisé enregistré par la v0.9.0 converti aux statuts de la v1.0.0; le chiffre de l’examinateur est conservé.",
+    lineServiceStatusRequired: "Ligne {n} : choisissez un statut d’examen pour chaque service spécialisé."
   }
 });
 

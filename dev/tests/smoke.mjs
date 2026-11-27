@@ -129,7 +129,7 @@ await step("production save: 0.5.0 under the candidate key; old 'SeaServiceRecor
   const saved = JSON.parse(await page.evaluate((k) => localStorage.getItem(k), CANDIDATE_KEY));
   assert.equal(await page.evaluate(() => localStorage.getItem("SeaServiceRecord")), before);
   assert.equal(saved.schemaVersion, "0.5.0");
-  assert.equal(saved.applicationVersion, "0.9.0");
+  assert.equal(saved.applicationVersion, "1.0.0");
   assert.deepEqual(saved.voyages.map((v) => v.calculation.convertedDays), [30, 56, 43]);
   assert.deepEqual(saved.voyages[1].specializedService.iceConditions, { POLAR: { selected: true, days: 12 }, ACCEPTABLE_ICE: { selected: true, days: 20 } });
   await page.reload();
@@ -206,6 +206,27 @@ await step("v0.9.0 item 3: ice days above days on board highlighted on the line 
   await page.fill(`${r2} [data-path='specializedService.iceConditions.ACCEPTABLE_ICE.days']`, "20");
   assert.doesNotMatch(await page.getAttribute(`${r2} .iceOption[data-ice=ACCEPTABLE_ICE]`, "class"), /iceExceed/);
   assert.equal(await page.locator(`${r2} .iceMsg`).count(), 0);
+});
+await step("v1.0.0 item 1: column M — several transfer types with days; days above days on board highlighted and blocking export", async () => {
+  const r2 = "#recordsBody tr:nth-child(2)";
+  assert.equal(await page.isChecked(`${r2} [data-path='specializedService.transferConditions.OIL_TRANSFER.selected']`), true, "older single type kept");
+  assert.equal(await page.inputValue(`${r2} [data-path='specializedService.transferConditions.OIL_TRANSFER.days']`), "");
+  await page.fill(`${r2} [data-path='specializedService.transferConditions.GAS_TRANSFER.days']`, "50");
+  assert.equal(await page.isChecked(`${r2} [data-path='specializedService.transferConditions.GAS_TRANSFER.selected']`), true, "days tick the type");
+  assert.match(await page.getAttribute(`${r2} .iceOption[data-ice=GAS_TRANSFER]`, "class"), /iceExceed/);
+  assert.equal(await page.textContent(`${r2} .iceOption[data-ice=GAS_TRANSFER] .iceMsg`), "More than days on board (39)");
+  assert.match(await page.getAttribute(`${r2} [data-col=daysOnBoard]`, "class"), /iceExceedR/);
+  const findings = await page.$$eval("#findings li.error", (ls) => ls.map((l) => l.dataset.code));
+  assert.ok(findings.includes("TRANSFER_DAYS_EXCEED_ONBOARD"));
+  await page.click("#btnExport");
+  assert.deepEqual(await page.$$eval("#statusPanel li", (ls) => ls.map((l) => l.dataset.code)), ["TRANSFER_DAYS_EXCEED_ONBOARD"]);
+  await page.selectOption("#langSelector", "fr");
+  assert.match(await page.textContent("#findings"), /Les jours d’opérations de transfert dépassent les jours à bord/);
+  await page.selectOption("#langSelector", "en");
+  await page.uncheck(`${r2} [data-path='specializedService.transferConditions.GAS_TRANSFER.selected']`);
+  assert.equal(await page.inputValue(`${r2} [data-path='specializedService.transferConditions.GAS_TRANSFER.days']`), "", "unticking clears the days");
+  assert.doesNotMatch(await page.getAttribute(`${r2} [data-col=daysOnBoard]`, "class") || "", /iceExceedR/);
+  assert.match(await page.textContent("#sumTransferDays"), /Oil transfer 0 \/ Chemical transfer 0 \/ Gas transfer 0/);
 });
 let exportedCandidateFile = null;
 await step("v0.9.0 item 9: Export JSON named CDN - SURNAME - UNVETTED QUALIFYING SEA SERVICE - acronym - total and dates", async () => {
@@ -374,7 +395,7 @@ await step("adjustment reason: neutral '(required)' when needed, red only while 
   assert.match(cls, /\bneeded\b/); assert.match(cls, /\bmissing\b/);
   assert.equal((await page.textContent(`${label} .reqTag`)).trim(), "(required)");
   const codes = await page.$$eval(".reviewRow[data-index='1'] .messages li.warning.reasonMissing", (ls) => ls.map((l) => l.dataset.code));
-  assert.deepEqual(codes, ["ADJUSTMENT_REASON_REQUIRED"], "shown clearly as a warning");
+  assert.ok(codes.includes("ADJUSTMENT_REASON_REQUIRED"), "shown clearly as a warning");
   assert.equal(await page.$$eval(".reviewRow[data-index='1'] .messages li.error", (ls) => ls.length), 0, "not an error");
   assert.equal(await page.$eval("#adjustmentReason-1", (e) => getComputedStyle(e).borderTopColor), "rgb(176, 0, 32)");
   await page.type("#adjustmentReason-1", "F");
@@ -419,7 +440,8 @@ await step("v0.8.0 items 5–6: summary — bold total with certificate, reduced
   const card = await page.$$eval(".summaryCard:has(#sumFinalAcceptedDays) > div", (ds) => ds.map((d) => d.textContent.trim()));
   assert.ok(!card.some((tx) => /^Lines\b/.test(tx)), card.join(" | "));
   const services = await page.$$eval("#sumSpecialServices li", (ls) => Object.fromEntries(ls.map((l) => [l.dataset.service, l.querySelector("strong").textContent])));
-  assert.deepEqual(services, { POLAR: "0", PASSENGER: "30", OIL_TRANSFER: "20", DP: "40", OFFSHORE: "40" });
+  assert.deepEqual(services, { POLAR: "0", PASSENGER: "30", OIL_TRANSFER: "0", DP: "40", OFFSHORE: "40" }, "v1.0.0: vetted services count 0 until a service status is chosen");
+  assert.equal((await page.textContent(".specialServices h4")).trim(), "Approved special service", "v1.0.0 item 3: no '(overlapping dates counted once)'");
 });
 
 await step("French: labels, capacity, certificate, months, input preserved across language switch", async () => {
@@ -434,7 +456,7 @@ await step("French: labels, capacity, certificate, months, input preserved acros
   assert.equal(await page.inputValue("#adjustmentReason-1"), "Five days alongside for repairs.");
   assert.equal(await page.inputValue("#finalAcceptedDays-1"), "20");
   assert.equal((await page.textContent(".reviewRow[data-index='1'] .reqTag")).trim(), "(obligatoire)");
-  assert.match(await page.textContent(".specialServices h4"), /Service spécialisé approuvé/);
+  assert.equal((await page.textContent(".specialServices h4")).trim(), "Service spécialisé approuvé");
   await page.selectOption("#langSelector", "en");
   assert.equal((await page.textContent("tr.voyageRow[data-index='0'] td:nth-child(2)")).trim(), "Mate in Charge of a Watch");
 });
@@ -445,12 +467,12 @@ await step("save stores 0.5.0 draft separately; candidate record untouched", asy
   const draft = JSON.parse(await page.evaluate(() => localStorage.getItem("SeaServiceRecord.v0.5.0")));
   assert.equal(await page.evaluate(() => localStorage.getItem("SeaServiceRecord")), before);
   assert.equal(draft.schemaVersion, "0.5.0");
-  assert.equal(draft.applicationVersion, "0.9.0");
+  assert.equal(draft.applicationVersion, "1.0.0");
   assert.deepEqual(draft.voyages.map((v) => v.examinerReview.reviewStatus), ["ACCEPTED", "ACCEPTED_WITH_ADJUSTMENT", "ADDITIONAL_INFORMATION_REQUIRED"]);
   assert.deepEqual(draft.voyages.map((v) => v.examinerReview.finalAcceptedDays), [null, 20, 40]);
   assert.deepEqual(draft.voyages.map((v) => v.examinerReview.effectiveAcceptedDays), [30, 20, 40]);
   assert.equal(draft.examinerAssessment.totalFinalAcceptedDays, 90);
-  assert.deepEqual(draft.calculationSummary.examinerDetermination.specialServiceApprovedDays, { POLAR: 0, PASSENGER: 30, OIL_TRANSFER: 20, DP: 40, OFFSHORE: 40 });
+  assert.deepEqual(draft.calculationSummary.examinerDetermination.specialServiceApprovedDays, { POLAR: 0, PASSENGER: 30, OIL_TRANSFER: 0, DP: 40, OFFSHORE: 40 });
 });
 
 await step("reload restores the examiner draft", async () => {
@@ -463,53 +485,81 @@ await step("reload restores the examiner draft", async () => {
   assert.equal(await page.textContent("#sumFinalAcceptedDays"), "90");
 });
 
-await step("v0.9.0 item 1: vet ice and transfer-operation days per line (over-limit = error that blocks save)", async () => {
-  // line 2 (index 1): Accepted with adjustment, 20 days counted; Polar waters (no days entered → automatic 0) and oil transfer (automatic 20)
-  const rows = await page.$$eval(".reviewRow[data-index='1'] .svcTable tr[data-service]", (trs) => trs.map((tr) => [tr.dataset.service, tr.querySelector(".svcAuto").textContent]));
-  assert.deepEqual(rows, [["POLAR", "0"], ["OIL_TRANSFER", "20"]]);
+await step("v1.0.0 item 2: review status per special service; final accepted days per service; over-limit blocks save", async () => {
+  // line 2 (index 1): Accepted with adjustment, 20 days counted; Polar waters and oil transfer ticked without days → automatic 0
+  const rows = await page.$$eval(".reviewRow[data-index='1'] .svcTable tr[data-service]", (trs) => trs.map((tr) => [tr.dataset.service, tr.querySelector(".svcAuto").textContent, tr.querySelector(".svcCounted").textContent]));
+  assert.deepEqual(rows, [["POLAR", "0", "0"], ["OIL_TRANSFER", "0", "0"]]);
   assert.equal(await page.locator(".reviewRow[data-index='0'] .svcTable").count(), 0, "line 1 has no ice / transfer service");
+  const opts = await page.$$eval("#svc-POLAR-status-1 option", (os) => os.filter((o) => !o.disabled).map((o) => o.textContent.trim()));
+  assert.deepEqual(opts, ["Accepted", "Accepted with adjustment", "Rejected"]);
+  assert.equal(await page.isDisabled("#svc-POLAR-final-1"), true, "adjusted days only with adjustment");
+  const w = await page.$$eval(".reviewRow[data-index='1'] .messages li", (ls) => ls.map((l) => l.dataset.code));
+  assert.ok(w.includes("SERVICE_STATUS_REQUIRED"));
+  await page.selectOption("#svc-POLAR-status-1", "ACCEPTED_WITH_ADJUSTMENT");
+  assert.equal(await page.isDisabled("#svc-POLAR-final-1"), false);
   await page.fill("#svc-POLAR-final-1", "25");
   const errs = await page.$$eval(".reviewRow[data-index='1'] .messages li.error", (ls) => ls.map((l) => l.dataset.code));
   assert.ok(errs.includes("SERVICE_DAYS_EXCEED_LINE"));
   assert.match(await page.getAttribute("#svc-POLAR-final-1", "class"), /svcOverLimit/);
+  assert.equal(await page.textContent(".reviewRow[data-index='1'] tr[data-service=POLAR] .svcCounted"), "20", "capped at the line's counted days");
   const before = await page.evaluate(() => localStorage.getItem("SeaServiceRecord.v0.5.0"));
   await page.click("#btnSave");
   assert.match(await page.textContent("#statusPanel"), /Not saved/);
   assert.equal(await page.evaluate(() => localStorage.getItem("SeaServiceRecord.v0.5.0")), before, "draft not overwritten");
   await page.fill("#svc-POLAR-final-1", "15");
-  assert.doesNotMatch(await page.getAttribute("#svc-POLAR-final-1", "class"), /svcOverLimit/);
   assert.match(await page.getAttribute("#svc-POLAR-reason-1", "class"), /svcReasonMissing/);
   await page.fill("#svc-POLAR-reason-1", "Ice log: 15 days in polar waters.");
+  assert.equal(await page.textContent(".reviewRow[data-index='1'] tr[data-service=POLAR] .svcCounted"), "15");
+  await page.selectOption("#svc-OIL_TRANSFER-status-1", "ACCEPTED_WITH_ADJUSTMENT");
   await page.fill("#svc-OIL_TRANSFER-final-1", "18");
-  await page.fill("#svc-OIL_TRANSFER-reason-1", "Two days without transfer.");
-  const warns = await page.$$eval(".reviewRow[data-index='1'] .messages li", (ls) => ls.map((l) => l.dataset.code));
-  assert.ok(!warns.includes("SERVICE_REASON_REQUIRED") && !warns.includes("SERVICE_DAYS_EXCEED_LINE"));
+  await page.fill("#svc-OIL_TRANSFER-reason-1", "Cargo record book: 18 days of transfers.");
+  const after = await page.$$eval(".reviewRow[data-index='1'] .messages li", (ls) => ls.map((l) => l.dataset.code));
+  assert.ok(!after.some((c) => c.startsWith("SERVICE_")), after.join());
 });
 
-await step("v0.9.0 item 2: examiner determination shows final service figures with the automatic one when adjusted", async () => {
+await step("v1.0.0 item 2: examiner determination shows final service figures with the automatic one when adjusted", async () => {
   const items = await page.$$eval("#sumSpecialServices li", (ls) => Object.fromEntries(ls.map((l) => [l.dataset.service, l.textContent.replace(/\s+/g, " ").trim()])));
   assert.equal(items.POLAR, "Polar waters: 15 (adjusted — automatic 0)");
-  assert.equal(items.OIL_TRANSFER, "Oil transfer: 18 (adjusted — automatic 20)");
+  assert.equal(items.OIL_TRANSFER, "Oil transfer: 18 (adjusted — automatic 0)");
   assert.equal(items.PASSENGER, "Passenger service: 30");
   await page.selectOption("#langSelector", "fr");
   const fr = await page.$$eval("#sumSpecialServices li", (ls) => ls.map((l) => l.textContent.replace(/\s+/g, " ").trim()));
   assert.ok(fr.includes("Eaux polaires: 15 (rajusté — automatique 0)"), fr.join(" | "));
   assert.equal(await page.inputValue("#svc-POLAR-reason-1"), "Ice log: 15 days in polar waters.", "kept across language switch");
+  assert.equal(await page.inputValue("#svc-POLAR-status-1"), "ACCEPTED_WITH_ADJUSTMENT");
+  const optsFr = await page.$$eval("#svc-POLAR-status-1 option", (os) => os.filter((o) => !o.disabled).map((o) => o.textContent.trim()));
+  assert.deepEqual(optsFr, ["Accepté", "Accepté avec rajustement", "Rejeté"]);
   await page.selectOption("#langSelector", "en");
 });
 
-await step("v0.9.0 items 9–10: complete the mandatory examiner fields → VETTED JSON with both service figures", async () => {
+await step("v0.9.0/v1.0.0: complete the mandatory examiner fields → VETTED JSON with service statuses and figures", async () => {
   await page.fill("#examinerName", "A. Examiner");
   for (const i of [0, 1, 2]) for (const f of ["vesselVerified", "capacityVerified", "datesVerified", "specializedServiceVerified", "supportingDocumentsVerified"]) await page.check(`#${f}-${i}`);
+  // a special service without a status blocks the export
+  await page.selectOption("#svc-OIL_TRANSFER-status-1", "ACCEPTED");
+  await page.evaluate(() => { const s = document.querySelector("#svc-OIL_TRANSFER-status-1"); s.value = ""; s.dispatchEvent(new Event("change", { bubbles: true })); });
+  let downloaded = false;
+  const onDl = () => { downloaded = true; };
+  page.on("download", onDl);
+  await page.click("#btnExport");
+  await page.waitForTimeout(400);
+  page.off("download", onDl);
+  assert.equal(downloaded, false);
+  assert.deepEqual(await page.$$eval("#statusPanel li", (ls) => ls.map((l) => l.dataset.code)), ["lineServiceStatusRequired"]);
+  assert.match(await page.getAttribute("#svc-OIL_TRANSFER-status-1", "class"), /missingField/);
+  await page.selectOption("#svc-OIL_TRANSFER-status-1", "ACCEPTED_WITH_ADJUSTMENT");
+  await page.fill("#svc-OIL_TRANSFER-final-1", "18");
+  await page.fill("#svc-OIL_TRANSFER-reason-1", "Cargo record book: 18 days of transfers.");
   const [download] = await Promise.all([page.waitForEvent("download"), page.click("#btnExport")]);
   assert.equal(download.suggestedFilename(), "123456789 - TREMBLAY - VETTED QUALIFYING SEA SERVICE - M500NC - TOTAL OF 90 DAYS FROM 2025-01-01 TO 2025-06-30.json");
   const json = JSON.parse(await readFile(await download.path(), "utf8"));
   const sr = json.voyages[1].examinerReview.serviceReview;
+  assert.equal(sr.POLAR.reviewStatus, "ACCEPTED_WITH_ADJUSTMENT");
   assert.equal(sr.POLAR.automaticDays, 0); assert.equal(sr.POLAR.finalAcceptedDays, 15); assert.equal(sr.POLAR.effectiveDays, 15);
-  assert.equal(sr.OIL_TRANSFER.automaticDays, 20); assert.equal(sr.OIL_TRANSFER.finalAcceptedDays, 18);
+  assert.equal(sr.OIL_TRANSFER.automaticDays, 0); assert.equal(sr.OIL_TRANSFER.finalAcceptedDays, 18);
   const ed = json.calculationSummary.examinerDetermination;
   assert.equal(ed.specialServiceApprovedDays.OIL_TRANSFER, 18);
-  assert.equal(ed.specialServiceAutomaticDays.OIL_TRANSFER, 20);
+  assert.equal(ed.specialServiceAutomaticDays.OIL_TRANSFER, 0);
   assert.equal(ed.specialServiceAdjusted.OIL_TRANSFER, true);
   assert.equal(json.examinerAssessment.examiner.examinerName, "A. Examiner");
   assert.match(json.examinerAssessment.reviewDate, /^\d{4}-\d{2}-\d{2}$/);
@@ -521,8 +571,9 @@ await step("examiner Export PDF / Print copy: bold total with certificate, speci
   const html = await page.innerHTML("#printView");
   assert.match(html, /<strong>Total final accepted days: 90 \(3 months\)<\/strong>/);
   assert.match(html, /Certificate applied for: <strong>Master 500 Gross Tonnage, Near Coastal<\/strong>/);
-  assert.match(html, /Oil transfer<\/th><td>18 \(adjusted — automatic 20\)/);
-  assert.match(html, /Polar waters: 0 → <strong>15<\/strong> \(Ice log: 15 days in polar waters\.\)/);
+  assert.match(html, /Oil transfer<\/th><td>18 \(adjusted — automatic 0\)/);
+  assert.match(html, /Polar waters — Accepted with adjustment: 0 → <strong>15<\/strong> \(Ice log: 15 days in polar waters\.\)/);
+  assert.match(html, /<h3>Approved special service<\/h3>/);
   assert.ok(!html.includes("Unvetted"));
 });
 

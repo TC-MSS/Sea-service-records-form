@@ -1,5 +1,5 @@
 /**
- * Summary engine — v0.9.0.
+ * Summary engine — v1.0.0.
  *
  * Distinguishes four totals:
  *  - total days on board    (candidate claim, column R)
@@ -28,6 +28,10 @@ export function buildSummary(voyages = []) {
     const ice = v.specializedService?.iceConditions || {};
     if (ice.POLAR?.selected) s.specializedService.polarDays += Number(ice.POLAR.days ?? 0);
     if (ice.ACCEPTABLE_ICE?.selected) s.specializedService.acceptableIceDays += Number(ice.ACCEPTABLE_ICE.days ?? 0);
+    const tr = v.specializedService?.transferConditions || {};
+    if (tr.OIL_TRANSFER?.selected) s.specializedService.oilTransferDays += Number(tr.OIL_TRANSFER.days ?? 0);
+    if (tr.CHEMICAL_TRANSFER?.selected) s.specializedService.chemicalTransferDays += Number(tr.CHEMICAL_TRANSFER.days ?? 0);
+    if (tr.GAS_TRANSFER?.selected) s.specializedService.gasTransferDays += Number(tr.GAS_TRANSFER.days ?? 0);
 
     const r = v.examinerReview;
     if (r.reviewStatus === "NOT_REVIEWED") e.recordsNotReviewed += 1; else e.recordsReviewed += 1;

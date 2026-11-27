@@ -1,5 +1,9 @@
 /**
- * Examiner review page controller — v0.9.0 development build.
+ * Examiner review page controller — v1.0.0 development build.
+ *
+ * v1.0.0: review status per special service; final accepted days per service displayed; a status for
+ * every special service required before export; summary heading "Approved special service".
+ *
  *
  * v0.9.0: special-service vetting (ice conditions, transfer operations) per line; summary shows the
  * final figure with the automatic one when adjusted; examiner name, a status and the five verification
@@ -95,17 +99,26 @@ function voyageRowHtml(v, i) {
 
 const VERIFICATION_FIELDS = ["vesselVerified", "capacityVerified", "datesVerified", "specializedServiceVerified", "supportingDocumentsVerified"];
 
-/** v0.9.0 — special-service vetting rows (ice conditions, transfer operation) for one line; built once per render. */
+/**
+ * Special-service vetting rows (ice conditions, transfer types) for one line; built once per render.
+ * v1.0.0: review status per service (Accepted / Accepted with adjustment / Rejected); adjusted days only
+ * with "Accepted with adjustment"; the final accepted days applicable to the service are displayed.
+ */
+const SERVICE_STATUS_OPTIONS = ["ACCEPTED", "ACCEPTED_WITH_ADJUSTMENT", "REJECTED"];
 function serviceVettingHtml(v, i) {
   const codes = Object.keys(v.examinerReview.serviceReview || {});
   if (!codes.length) return "";
+  const statusOptions = `<option value="" disabled hidden>${esc(t(language, "selectStatus"))}</option>` +
+    SERVICE_STATUS_OPTIONS.map((st) => `<option value="${st}">${esc(t(language, st))}</option>`).join("");
   const rows = codes.map((code) => `<tr data-service="${code}">
       <td>${esc(t(language, code))}</td>
       <td class="num svcAuto"></td>
-      <td><input type="number" min="0" step="1" inputmode="numeric" data-sfield="finalAcceptedDays" id="svc-${code}-final-${i}" aria-label="${esc(t(language, code))} — ${esc(t(language, "serviceFinal"))}"></td>
+      <td><select data-sfield="reviewStatus" id="svc-${code}-status-${i}" aria-label="${esc(t(language, code))} — ${esc(t(language, "serviceStatus"))}">${statusOptions}</select></td>
+      <td><input type="number" min="0" step="1" inputmode="numeric" data-sfield="finalAcceptedDays" id="svc-${code}-final-${i}" aria-label="${esc(t(language, code))} — ${esc(t(language, "serviceFinalInput"))}"></td>
+      <td class="num svcCounted"></td>
       <td><input data-sfield="adjustmentReason" id="svc-${code}-reason-${i}" aria-label="${esc(t(language, code))} — ${esc(t(language, "serviceReason"))}"></td></tr>`).join("");
-  return `<fieldset class="serviceVetting"><legend>${esc(t(language, "serviceVetting"))}</legend>
-    <table class="svcTable"><thead><tr><th></th><th>${esc(t(language, "serviceAutomatic"))}</th><th>${esc(t(language, "serviceFinal"))}</th><th>${esc(t(language, "serviceReason"))}</th></tr></thead>
+  return `<fieldset class="serviceVetting"><legend>${esc(t(language, "serviceVetting"))} <span class="reqStar">*</span></legend>
+    <table class="svcTable"><thead><tr><th></th><th>${esc(t(language, "serviceAutomatic"))}</th><th>${esc(t(language, "serviceStatus"))}</th><th>${esc(t(language, "serviceFinalInput"))}</th><th>${esc(t(language, "serviceCounted"))}</th><th>${esc(t(language, "serviceReason"))}</th></tr></thead>
     <tbody>${rows}</tbody></table></fieldset>`;
 }
 
@@ -113,6 +126,7 @@ function readServiceInputs(panel) {
   const out = {};
   panel.querySelectorAll(".svcTable tr[data-service]").forEach((tr) => {
     out[tr.dataset.service] = {
+      reviewStatus: tr.querySelector("[data-sfield=reviewStatus]").value,
       finalAcceptedDays: toNumberOrNull(tr.querySelector("[data-sfield=finalAcceptedDays]").value),
       adjustmentReason: tr.querySelector("[data-sfield=adjustmentReason]").value
     };
@@ -123,6 +137,7 @@ function readServiceInputs(panel) {
 function writeServiceInputs(panel, review) {
   panel.querySelectorAll(".svcTable tr[data-service]").forEach((tr) => {
     const e = review.serviceReview?.[tr.dataset.service] || {};
+    tr.querySelector("[data-sfield=reviewStatus]").value = e.reviewStatus || "";
     tr.querySelector("[data-sfield=finalAcceptedDays]").value = e.finalAcceptedDays ?? "";
     tr.querySelector("[data-sfield=adjustmentReason]").value = e.adjustmentReason ?? "";
   });
@@ -134,13 +149,19 @@ function refreshServiceInputs(panel, v) {
   panel.querySelectorAll(".svcTable tr[data-service]").forEach((tr) => {
     const e = r.serviceReview?.[tr.dataset.service];
     tr.querySelector(".svcAuto").textContent = e ? String(e.automaticDays) : "—";
+    tr.querySelector(".svcCounted").textContent = e ? String(e.effectiveDays) : "0";
+    const status = tr.querySelector("[data-sfield=reviewStatus]");
     const final = tr.querySelector("[data-sfield=finalAcceptedDays]");
     const reason = tr.querySelector("[data-sfield=adjustmentReason]");
-    for (const el of [final, reason]) { el.disabled = !enabled; if (!enabled) el.value = ""; }
+    status.disabled = !enabled;
+    if (!enabled) status.value = "";
+    const adjusting = enabled && status.value === "ACCEPTED_WITH_ADJUSTMENT";
+    for (const el of [final, reason]) { el.disabled = !adjusting; if (!adjusting) el.value = ""; }
     final.placeholder = e ? String(e.automaticDays) : "";
     final.classList.toggle("svcOverLimit", Boolean(e?.overLimit || e?.invalid));
     final.setAttribute("aria-invalid", String(Boolean(e?.overLimit || e?.invalid)));
     reason.classList.toggle("svcReasonMissing", Boolean(e?.reasonMissing));
+    status.classList.toggle("missingField", status.classList.contains("missingField") && !status.value && enabled);
   });
 }
 
@@ -199,7 +220,7 @@ function refreshLine(index) {
 
   const errors = [...voyageResult.errors, ...result.errors];
   const warnings = [...voyageResult.warnings, ...result.warnings];
-  const warnClass = (c) => (["ADJUSTMENT_REASON_REQUIRED", "SERVICE_REASON_REQUIRED"].includes(c) ? "warning reasonMissing" : c === "STATUS_SET_AUTOMATICALLY" ? "warning info" : "warning");
+  const warnClass = (c) => (["ADJUSTMENT_REASON_REQUIRED", "SERVICE_REASON_REQUIRED", "SERVICE_STATUS_REQUIRED"].includes(c) ? "warning reasonMissing" : c === "STATUS_SET_AUTOMATICALLY" ? "warning info" : "warning");
   panel.querySelector(".messages").innerHTML =
     errors.map((c) => `<li class="error" data-code="${c}">${esc(t(language, c))}</li>`).join("") +
     warnings.map((c) => `<li class="${warnClass(c)}" data-code="${c}">${esc(t(language, c))}</li>`).join("");
@@ -218,6 +239,9 @@ function refreshSummary() {
   $("sumDaysAtSea").textContent = s.candidateClaim.totalDaysAtSea;
   $("sumPolarDays").textContent = s.specializedService.polarDays;
   $("sumIceDays").textContent = s.specializedService.acceptableIceDays;
+  const sp = s.specializedService;
+  $("sumTransferDays").textContent = [["OIL_TRANSFER", sp.oilTransferDays], ["CHEMICAL_TRANSFER", sp.chemicalTransferDays], ["GAS_TRANSFER", sp.gasTransferDays]]
+    .map(([code, n]) => `${t(language, code)} ${n ?? 0}`).join(" / ");
   const ac = s.automatedCalculation;
   $("sumConvertedDays").textContent = ac.totalConvertedDays === null ? t(language, "notCalculated") : ac.totalConvertedDays;
   $("sumConvertedMonths").textContent = ac.totalConvertedMonths === null ? "" : `(${monthsText(ac.totalConvertedMonths)})`;
@@ -341,6 +365,7 @@ function examinerExportProblems() {
     const n = i + 1;
     if (r.reviewStatus === "NOT_REVIEWED") items.push(["lineStatusRequired", { n }]);
     if (VERIFICATION_FIELDS.some((f) => !r[f])) items.push(["lineVerificationRequired", { n }]);
+    if (Object.values(r.serviceReview || {}).some((e) => e.enabled && !e.reviewStatus)) items.push(["lineServiceStatusRequired", { n }]);
     if (Object.values(r.serviceReview || {}).some((e) => e.overLimit)) items.push(["lineServiceOverLimit", { n }]);
     else if (lineErrorState.get(i)) items.push(["lineHasErrors", { n }]);
   });
@@ -364,6 +389,10 @@ function exportAllowed() {
     const r = record.voyages[Number(row.dataset.index)].examinerReview;
     row.querySelectorAll(".verifyGrid input").forEach((el) => el.closest("label").classList.toggle("missingCheck", !el.checked));
     row.querySelector("[data-field=reviewStatus]").classList.toggle("missingField", r.reviewStatus === "NOT_REVIEWED");
+    row.querySelectorAll(".svcTable tr[data-service]").forEach((tr) => {
+      const e = r.serviceReview?.[tr.dataset.service];
+      tr.querySelector("[data-sfield=reviewStatus]").classList.toggle("missingField", Boolean(e?.enabled && !e.reviewStatus));
+    });
   });
   if (items.length) { showBlocked("examinerExportBlocked", items); return false; }
   return true;

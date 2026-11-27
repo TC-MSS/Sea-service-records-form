@@ -1,5 +1,5 @@
 /**
- * Record rules — v0.9.0 (shared by the production and development pages).
+ * Record rules — v0.9.0 / v1.0.0 (transfer days also checked against days on board) (shared by the production and development pages).
  *
  *  - Certificate department and acronym (file names).
  *  - Mandatory service-record fields before Export JSON / Export PDF, by department
@@ -72,14 +72,24 @@ export function candidateExportCheck(record) {
   return { ok: !header.length && !lines.length, header, lines, department: dept || "DECK", columns };
 }
 
-/** Ice condition codes whose days exceed the line's days on board. */
+/**
+ * Special-service codes (ice conditions, transfer types — v1.0.0) whose days exceed the line's days on board.
+ */
 export function iceExceeding(v) {
   const onBoard = v.dates?.daysOnBoard;
-  const c = v.specializedService?.iceConditions || {};
   if (onBoard === null || onBoard === undefined) return [];
-  return ["POLAR", "ACCEPTABLE_ICE"].filter((code) => c[code]?.selected && c[code].days !== null && c[code].days !== undefined && Number(c[code].days) > onBoard);
+  const s = v.specializedService || {};
+  const over = (conds, codes) => codes.filter((code) => conds?.[code]?.selected && conds[code].days !== null && conds[code].days !== undefined && Number(conds[code].days) > onBoard);
+  return [...over(s.iceConditions, ["POLAR", "ACCEPTABLE_ICE"]), ...over(s.transferConditions, ["OIL_TRANSFER", "CHEMICAL_TRANSFER", "GAS_TRANSFER"])];
 }
-const iceExceedCodes = (v) => (iceExceeding(v).length ? ["ICE_DAYS_EXCEED_ONBOARD"] : []);
+export const specialDaysExceeding = iceExceeding;
+const iceExceedCodes = (v) => {
+  const over = iceExceeding(v);
+  return [
+    ...(over.some((c) => c === "POLAR" || c === "ACCEPTABLE_ICE") ? ["ICE_DAYS_EXCEED_ONBOARD"] : []),
+    ...(over.some((c) => c.endsWith("_TRANSFER")) ? ["TRANSFER_DAYS_EXCEED_ONBOARD"] : [])
+  ];
+};
 
 /** Earliest engagement and latest discharge on the record (YYYY-MM-DD), or null. */
 export function serviceDateRange(record) {
