@@ -1,5 +1,5 @@
 /**
- * Calculation engine — v0.8.0 (shared by the production and development pages).
+ * Calculation engine — v0.9.0 (shared by the production and development pages).
  *
  * Candidate day counts, examiner-basis resolution and the entry point to the
  * TP 2293 / MPR conversion engine (tp2293Engine.js).
@@ -7,6 +7,7 @@
  */
 import { serviceDaysOnBoard, convertAll } from "./tp2293Engine.js";
 import { ENUMS, createIceConditions, iceServiceFromConditions } from "./dataModel.js";
+import { updateServiceReview } from "./serviceVetting.js";
 
 /**
  * Inclusive calendar-day count (kept for reference / backward compatibility).
@@ -140,6 +141,7 @@ export function updateExaminerBasis(voyage) {
   const eff = effectiveAcceptedDays(voyage);
   r.effectiveAcceptedDays = eff.days;
   r.acceptedDaysSource = eff.source;
+  updateServiceReview(voyage); // v0.9.0
   return voyage;
 }
 

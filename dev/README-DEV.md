@@ -1,4 +1,23 @@
-# Sea Service Records Form — v0.8.0
+# Sea Service Records Form — v0.9.0
+
+## What changed in v0.9.0
+
+1. Examiner vets **ice and transfer-operation days** per line (automatic, final, reason). Above the line's counted days = error; save and export refused until corrected.
+2. Examiner summary shows the final service figures, "(adjusted — automatic N)" when changed.
+3. Candidate: ice days above days on board highlighted on the line and blocking export (ice days optional).
+4. Older records: not required this release (conversion code kept).
+6. Candidate reminder next to the export buttons (what to send to the Transport Canada Centre examiner).
+7. Candidate mandatory fields by certificate department (EXN 2), "Days at sea" mandatory.
+8. NC1 / NC2 shown as "Near Coastal, Class 1 / 2".
+9. File names `CDN - SURNAME - UNVETTED|VETTED QUALIFYING SEA SERVICE - ACRONYM - TOTAL OF X DAYS FROM … TO …`.
+10. Examiner export requires the name, a status and five verification boxes on every line.
+11. Examiner review date shown automatically; candidate application date defaults to today.
+
+New shared modules: `js/recordRules.js` (departments, acronyms, export checks, file names), `js/serviceVetting.js` (service vetting). Tests: 44 unit, 43 smoke.
+
+---
+
+# v0.8.0 notes
 
 ## What changed in v0.8.0
 
@@ -62,9 +81,9 @@ Also, with no basis, the final days were never compared with anything (`adjustme
 ```
 node tools/check-syntax.mjs ..
 node tools/check-deps.mjs ..
-node --test tests/model.test.mjs tests/tp2293.test.mjs     # 38 unit tests
+node --test tests/model.test.mjs tests/tp2293.test.mjs     # 44 unit tests
 npm i -D playwright && npx playwright install chromium
-node tests/smoke.mjs                                       # 35 browser smoke tests (production page included)
+node tests/smoke.mjs                                       # 43 browser smoke tests (production page included)
 ```
 
 `npm test` runs all of them. Latest results: `docs/TEST_RESULTS.txt`. The smoke test writes `tests/smoke-*.png` screenshots; do not commit them.

@@ -1,5 +1,5 @@
 /**
- * Examiner review — applies examiner input to a voyage line (v0.8.0).
+ * Examiner review — applies examiner input to a voyage line (v0.9.0: serviceReview input).
  *
  * v0.8.0:
  *  - The examiner basis was removed; final accepted days are compared with the converted days.
@@ -13,7 +13,8 @@ import { validateExaminerReview } from "./validationEngine.js";
 
 export const EXAMINER_INPUT_FIELDS = Object.freeze([
   "reviewStatus", "vesselVerified", "capacityVerified", "datesVerified", "specializedServiceVerified",
-  "supportingDocumentsVerified", "finalAcceptedDays", "adjustmentReason", "examinerComments"
+  "supportingDocumentsVerified", "finalAcceptedDays", "adjustmentReason", "examinerComments",
+  "serviceReview" // v0.9.0 — { [service]: { finalAcceptedDays, adjustmentReason } }
 ]);
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Validation engine — v0.8.0.
+ * Validation engine — v0.9.0.
  * Returns codes; the UI translates them (see examinerI18n.js).
  * Certificate eligibility is intentionally out of scope for this build.
  * Conversion (TP 2293) warnings are surfaced as line warnings.
@@ -57,8 +57,14 @@ export function validateExaminerReview(voyage) {
   if (final !== null && (!Number.isFinite(Number(final)) || Number(final) < 0)) errors.push("NEGATIVE_FINAL_ACCEPTED_DAYS");
   else if (final !== null && !Number.isInteger(Number(final))) errors.push("FINAL_ACCEPTED_DAYS_NOT_WHOLE");
 
+  // v0.9.0 — special-service vetting.
+  const services = Object.values(r.serviceReview || {});
+  if (services.some((e) => e.overLimit)) errors.push("SERVICE_DAYS_EXCEED_LINE");
+  if (services.some((e) => e.invalid)) errors.push("SERVICE_DAYS_INVALID");
+
   // Warnings: shown clearly, never block saving.
   if (reasonMissing(voyage)) warnings.push("ADJUSTMENT_REASON_REQUIRED");
+  if (services.some((e) => e.reasonMissing)) warnings.push("SERVICE_REASON_REQUIRED");
   if (r.reviewStatus === "ACCEPTED_WITH_ADJUSTMENT" && final === null) warnings.push("FINAL_ACCEPTED_DAYS_REQUIRED");
   if (r.reviewStatus === "ACCEPTED" && r.referenceDays === null) warnings.push("ACCEPTED_WITHOUT_CONVERTED_DAYS");
   if (r.reviewStatus === "ADDITIONAL_INFORMATION_REQUIRED" && final !== null) warnings.push("FINAL_DAYS_PENDING_INFORMATION");

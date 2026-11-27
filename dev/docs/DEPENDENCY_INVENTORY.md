@@ -1,8 +1,26 @@
-# Dependency Inventory — Sea Service Records Form v0.8.0
+# Dependency Inventory — Sea Service Records Form v0.9.0
 
-Repository snapshot: `Sea-service-records-form-main` (main after v0.7.0, downloaded 2026-11-26) plus the v0.8.0 package.
+Repository snapshot: `Sea-service-records-form-main` (main after v0.8.0, downloaded 2026-11-27) plus the v0.9.0 package.
 Generated with `dev/tools/check-deps.mjs` and `dev/tools/check-syntax.mjs`, then reviewed by hand.
 Result: **all local references resolve; no missing targets.**
+
+## 0a. v0.9.0 in one paragraph
+
+Two **new shared modules**, loaded by the production page as well as the development pages:
+
+- `dev/js/recordRules.js` — certificate department and acronym, candidate export check (mandatory fields EXN 2, ice days ≤ days on board), file names, date range, today's date. Imported by `candidate.js` and `examiner.js`.
+- `dev/js/serviceVetting.js` — examiner vetting of ice / transfer-operation days. Imported by `calculationEngine.js`, `summaryEngine.js` and `examiner.js`.
+
+Production file changed: `index.html` (S header, mandatory note, reminder). Shared modules changed: `candidate.js`, `calculationEngine.js`, `dataModel.js`, `examinerI18n.js`, `examinerReview.js`, `printView.js`, `referenceData.js`, `summaryEngine.js`, `validationEngine.js`, `dev/css/candidate.css`, `dev/css/examiner.css`. Unchanged: `js/app.js`, `tp2293Engine.js`, `migrationEngine.js`, `storageEngine.js`. No file deleted; the retired files in §5 are still present.
+
+Updated graph additions:
+
+```
+dev/js/candidate.js ─ recordRules.js
+dev/js/examiner.js  ─ recordRules.js, serviceVetting.js
+dev/js/calculationEngine.js ─ serviceVetting.js
+dev/js/summaryEngine.js ─ serviceVetting.js
+```
 
 ## 0. v0.8.0 in one paragraph
 
@@ -88,9 +106,11 @@ No `fetch()` calls: nothing in `data/` is loaded at runtime. No external (CDN) s
 | dev/js/examinerI18n.js | candidate, examiner, printView | Runtime — changed | v0.8.0 EN/FR text. |
 | dev/js/printView.js | candidate, examiner | Runtime — changed | v0.8.0: examiner summary layout; declaration caution copy. |
 | dev/js/examiner.js | dev/examiner.html | Dev — changed | v0.8.0 items 3–6. |
+| dev/js/recordRules.js | candidate, examiner | **Runtime — new in v0.9.0** | Departments, acronyms, export checks, file names. |
+| dev/js/serviceVetting.js | calculationEngine, summaryEngine, examiner | **Runtime — new in v0.9.0** | Ice / transfer-operation vetting. |
 | dev/js/referenceData.js | candidate, examiner, printView | **Runtime — changed** | v0.8.0: MATE label "Mate in Charge of a Watch" / "Officier de pont en charge du quart à la passerelle". |
 | dev/css/examiner.css | production and dev pages | **Runtime — changed** | v0.8.0: total box, declaration caution. |
-| dev/css/candidate.css | production and dev pages | Runtime — unchanged in v0.8.0 | |
+| dev/css/candidate.css | production and dev pages | **Runtime — changed in v0.9.0** | Mandatory markers, ice highlight, reminder. |
 | dev/index.html, dev/examiner.html | entry pages | Dev — changed | |
 | dev/tests/*, dev/tools/*, dev/package.json, dev/README-DEV.md, dev/docs/* | Node / docs | Retain | |
 
@@ -111,7 +131,7 @@ Delete them in a **separate** pull request (INSTALL_v0.7.0.md, step 10), so each
 ## 6. Files that must be retained
 
 - `index.html`, `js/app.js`, `css/app.css`
-- **all of `dev/js/` and `dev/css/`** (production runtime from v0.7.0)
+- **all of `dev/js/` and `dev/css/`** (production runtime from v0.7.0), including `recordRules.js` and `serviceVetting.js` (v0.9.0)
 - `dev/index.html`, `dev/examiner.html`
 - `examiner.html`, `js/examiner-labels.js` — until `dev/examiner.html` is promoted
 - `dev/tests/*`, `dev/tools/*`, `dev/package.json`, docs, `README.md`, `Project_status.md`

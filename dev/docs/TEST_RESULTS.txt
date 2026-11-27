@@ -1,4 +1,4 @@
-Test run: 2026-11-26T03:21Z  Node v22.23.5  Package 0.8.0
+Test run: 2026-11-27T13:27Z  Node v22.23.5  Package 0.9.0
 
 == Syntax ==
 OK   data/certificates.json
@@ -14,7 +14,9 @@ OK   dev/js/examinerI18n.js  (module)
 OK   dev/js/examinerReview.js  (module)
 OK   dev/js/migrationEngine.js  (module)
 OK   dev/js/printView.js  (module)
+OK   dev/js/recordRules.js  (module)
 OK   dev/js/referenceData.js  (module)
+OK   dev/js/serviceVetting.js  (module)
 OK   dev/js/storageEngine.js  (module)
 OK   dev/js/summaryEngine.js  (module)
 OK   dev/js/tp2293Engine.js  (module)
@@ -96,6 +98,12 @@ All local references resolve. OK
 ✔ updateExaminerBasis compares numbers, not strings
 ✔ PDF/print copies: unvetted label (candidate); v0.8.0 examiner summary with certificate
 ✔ v0.8.0 item 1: capacity MATE is 'Mate in Charge of a Watch' / 'Officier de pont en charge du quart à la passerelle'
+✔ v0.9.0 item 7: mandatory fields by department before export (deck vs engine)
+✔ v0.9.0 item 3: ice days above days on board block the candidate export; blank ice days do not
+✔ v0.9.0 item 9: export file name, acronyms and date range
+✔ v0.9.0 item 8: NC1 / NC2 spelled out as Near Coastal
+✔ v0.9.0 items 1–2: examiner vets ice and transfer days; over-limit is an error, summary shows final + automatic
+✔ v0.9.0: an examiner draft with service figures survives save and reload (normalisation)
 ✔ R1 TP 2293 3.3(1),(4) Table 1 (A): discharge − engagement, minimum 1
 ✔ R2 MPR 115(1): 8-hour watch, 1 day = 1 day
 ✔ R3 MPR 115(2) / TP 2293 3.5(1): 12-hour watch = 1.5 days, rounded down
@@ -113,14 +121,14 @@ All local references resolve. OK
 ✔ TP 2293 3.25: barge — deck service manual review, engine service calculated
 ✔ explanations are produced in both languages with references
 ✔ missing dates → not calculated, null
-ℹ tests 38
+ℹ tests 44
 ℹ suites 0
-ℹ pass 38
+ℹ pass 44
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 152.307144
+ℹ duration_ms 126.773496
 
 == Smoke tests (Playwright / Chromium) ==
 PASS  production index.html loads without script errors or 404s; old calculator not loaded
@@ -130,17 +138,22 @@ PASS  production loads the 0.4.0 record saved before this release (R per TP 2293
 PASS  production column K: several ice conditions with days
 PASS  production save: 0.5.0 under the candidate key; old 'SeaServiceRecord' never overwritten
 PASS  v0.8.0 item 1: capacity 'Mate in Charge of a Watch' / 'Officier de pont en charge du quart à la passerelle'
-PASS  v0.8.0 item 2: Export JSON blocked until the Applicant Declaration is ticked; caution shown
-PASS  production Export JSON downloads the 0.5.0 file to e-mail
+PASS  v0.9.0 items 6 and 8: reminder next to the export buttons; NC1 spelled out
+PASS  v0.8.0/v0.9.0: export blocked without the declaration and mandatory fields (S days at sea); caution shown
+PASS  v0.9.0 item 7: mandatory columns follow the certificate department (deck vs engine)
+PASS  v0.9.0 item 3: ice days above days on board highlighted on the line and blocking export
+PASS  v0.9.0 item 9: Export JSON named CDN - SURNAME - UNVETTED QUALIFYING SEA SERVICE - acronym - total and dates
 PASS  production Import JSON re-opens a file (pre-0.4 file converted)
 PASS  production loads a record saved by the v0.6.0 development candidate form
-PASS  production Export PDF / Print: blocked without the declaration; read-only copy with unvetted label once ticked
+PASS  production Export PDF / Print: blocked when requirements are missing; read-only copy with unvetted label otherwise
 PASS  production: no uncaught script errors
 PASS  dev/examiner.html loads without script errors or 404s
 PASS  end-to-end: examiner loads the record saved by production index.html (same converted days)
-PASS  examiner: 'Schema / record' not displayed; schemaVersion and recordId kept in the JSON
+PASS  examiner: 'Schema / record' not displayed; schemaVersion and recordId kept in the saved JSON
+PASS  v0.9.0 item 10: examiner export blocked until name, status and the 5 verification boxes are complete
+PASS  v0.9.0 item 11: review date shows today automatically (read-only)
 PASS  load legacy 0.4.0 fixture from browser storage
-PASS  Converted days column follows 'Days at sea, if different' and shows TP 2293 values
+PASS  Converted days column follows 'Days at sea' and shows TP 2293 values
 PASS  'Capacity verified' and 'Specialized service verified' are in the page markup (EN)
 PASS  v0.8.0 items 3–4: no examiner basis; 'Not reviewed' not selectable; final days disabled until a status allows them
 PASS  v0.8.0 item 3: Accepted counts the converted days; final days stay disabled
@@ -150,6 +163,9 @@ PASS  v0.8.0 items 5–6: summary — bold total with certificate, reduced list,
 PASS  French: labels, capacity, certificate, months, input preserved across language switch
 PASS  save stores 0.5.0 draft separately; candidate record untouched
 PASS  reload restores the examiner draft
+PASS  v0.9.0 item 1: vet ice and transfer-operation days per line (over-limit = error that blocks save)
+PASS  v0.9.0 item 2: examiner determination shows final service figures with the automatic one when adjusted
+PASS  v0.9.0 items 9–10: complete the mandatory examiner fields → VETTED JSON with both service figures
 PASS  examiner Export PDF / Print copy: bold total with certificate, special services
 PASS  examiner draft saved by v0.7.0 (Accepted with final days ≠ converted) loads as 'Accepted with adjustment'
 PASS  import pre-0.4 JSON: legacy positionVerified/seaServiceVerified/polar/ice/DP/offshore/tanker
@@ -159,4 +175,4 @@ PASS  candidate form: French labels and manual review display
 PASS  candidate save uses its own key; examiner loads it with calculated days
 PASS  no uncaught script errors during the dev session
 
-35/35 smoke tests passed.
+43/43 smoke tests passed.

@@ -1,67 +1,70 @@
-# Deployment and Acceptance-Test Checklist — v0.8.0
+# Deployment and Acceptance-Test Checklist — v0.9.0
 
-v0.8.0 changes **production** `index.html` and the shared modules in `dev/js` and `dev/css`, which the production page loads. Keep the backup tag until sign-off.
+v0.9.0 changes **production** `index.html` and shared modules in `dev/js` / `dev/css` loaded by it, and adds two shared modules (`dev/js/recordRules.js`, `dev/js/serviceVetting.js`). Keep the backup tag until sign-off.
 
 ## A. Pre-deployment
 
-- [ ] Backup tag of `main` exists: `backup-before-v0.8.0` (INSTALL.md step 1).
-- [ ] Work is on branch `v0.8.0`, not `main`.
+- [ ] Backup tag `backup-before-v0.9.0` exists (INSTALL.md step 1).
+- [ ] Work is on branch `v0.9.0`.
 - [ ] `node dev/tools/check-syntax.mjs .` — "All syntax checks passed."
 - [ ] `node dev/tools/check-deps.mjs .` — "All local references resolve. OK".
-- [ ] `cd dev && node --test tests/model.test.mjs tests/tp2293.test.mjs` — **38/38** pass.
-- [ ] `cd dev && node tests/smoke.mjs` — **35/35** pass.
-- [ ] Pull request **Files changed: 22** — 1 root file (`index.html`) and 21 under `dev/`. No new files, no deletions. `js/app.js`, `dev/js/tp2293Engine.js`, `dev/js/migrationEngine.js`, `dev/js/storageEngine.js` and `dev/css/candidate.css` must **not** appear.
+- [ ] `cd dev && node --test tests/model.test.mjs tests/tp2293.test.mjs` — **44/44** pass.
+- [ ] `cd dev && node tests/smoke.mjs` — **43/43** pass.
+- [ ] Pull request **Files changed: 25** — 1 root file (`index.html`), 24 under `dev/` of which **2 new** (`dev/js/recordRules.js`, `dev/js/serviceVetting.js`). No deletions. `js/app.js` and `dev/js/tp2293Engine.js` must not appear.
 
 ## B. Deployment
 
-- [ ] Pull request merged; **Actions → pages build and deployment** has a green check.
-- [ ] `…/index.html`, `…/dev/index.html`, `…/dev/examiner.html` open after **Ctrl+F5** with no red console errors (F12) and no 404s.
+- [ ] Pull request merged; **Actions → pages build and deployment** green.
+- [ ] `…/index.html`, `…/dev/index.html`, `…/dev/examiner.html` open after **Ctrl+F5** with no red console errors and no 404s.
 
-## C. Acceptance tests — candidate pages (`index.html` and `dev/index.html`)
-
-| # | Item | Test | Expected | Pass |
-|---|---|---|---|---|
-| C1 | 1 | Column A list, EN | "Mate in Charge of a Watch" (Supernumerary Mate unchanged) | ☐ |
-| C2 | 1 | Same, FR | "Officier de pont en charge du quart à la passerelle" | ☐ |
-| C3 | 1 | Record saved before v0.8.0 with capacity Mate | Shows the new label; T unchanged | ☐ |
-| C4 | 2 | Declaration unticked | Caution "Mandatory: tick the Applicant Declaration before you can Export JSON or Export PDF / Print." under the declaration | ☐ |
-| C5 | 2 | Click **Export JSON** while unticked | No file downloads; message "Export blocked…"; declaration box turns red | ☐ |
-| C6 | 2 | Click **Export PDF / Print** while unticked | Print window does not open; same message | ☐ |
-| C7 | 2 | Press **Ctrl+P** while unticked | Printed page shows only the caution ("cannot be printed…") | ☐ |
-| C8 | 2 | Tick the declaration | Caution and red box disappear; Export JSON and Export PDF work | ☐ |
-| C9 | 2 | **Save** while unticked | Still allowed (record kept in the browser) | ☐ |
-| C10 | — | FR | Caution and message in French | ☐ |
-
-## D. Acceptance tests — examiner review (`dev/examiner.html`)
+## C. Candidate pages (`index.html`, `dev/index.html`)
 
 | # | Item | Test | Expected | Pass |
 |---|---|---|---|---|
-| D1 | 4 | Review panel | No "Examiner basis" field; "Converted days (reference)" shows column T | ☐ |
-| D2 | 3 | Review status list | Choices: Accepted, Accepted with adjustment, Additional information required, Rejected. A new line shows "Select a status"; "Not reviewed" cannot be selected | ☐ |
-| D3 | 3 | New line | Final accepted days disabled; counted 0 | ☐ |
-| D4 | 3 | Accepted | Final days disabled (shows T as a hint); counted = T | ☐ |
-| D5 | 3 | Accepted with adjustment | Final days enabled; counted = final days; reason "(required)" red until typed | ☐ |
-| D6 | 3 | Additional information required | Final days enabled; counted = final days if entered, else 0; reason needed only if final ≠ T | ☐ |
-| D7 | 3 | Rejected (after typing final days) | Final days cleared and disabled; counted 0 | ☐ |
-| D8 | 3 | Accepted on a "Manual review" line | Counted 0 + warning to use Accepted with adjustment | ☐ |
-| D9 | 5 | Summary › Examiner determination | **Total final accepted days: N (months)** in bold, followed by **Certificate applied for: …** in bold | ☐ |
-| D10 | 6 | Same card | Only: total + certificate, difference from total converted days, Additional information required, Approved special service. No "Lines …", Accepted, Accepted with adjustment or Rejected counts | ☐ |
-| D11 | 6 | Special service list | One row per service selected on any line (ice, transfer, passenger, fishing, DP, offshore) with approved days | ☐ |
-| D12 | 6 | Two lines with oil transfer, dates overlapping 10 days, both Accepted (30 and 20 days) | Oil transfer = 40 | ☐ |
-| D13 | 6 | Polar waters ticked with 40 days on a 30-day accepted line | Polar waters = 30 (capped) | ☐ |
-| D14 | — | Load an examiner draft saved with v0.7.0 (Accepted, final ≠ T) | Opens as "Accepted with adjustment", final days kept, conversion warning on the line | ☐ |
-| D15 | 5–6 | **Export PDF / Print** | Total and certificate in bold; special-service table; no basis column | ☐ |
-| D16 | — | FR | Labels, certificate and special services in French | ☐ |
-| D17 | — | Edge and Chrome | Same results | ☐ |
+| C1 | 6 | Look under the export buttons | Blue reminder: saved only in this browser; send to the local Transport Canada Centre examiner the JSON file, discharge book entries and testimonials (EN / FR) | ☐ |
+| C2 | 8 | Column H list | "Near Coastal, Class 1 / 2" (FR "À proximité du littoral, classe 1 / 2") | ☐ |
+| C3 | 11 | New record | Application date = today; can be changed | ☐ |
+| C4 | 7 | Certificate deck (e.g. Master 500 GT NC) | Header * on A B C D G H I J P Q S | ☐ |
+| C5 | 7 | Certificate engine (e.g. Second-class Engineer, Motor) | Header * on A B C D E I J P Q S (not G, H) | ☐ |
+| C6 | 7 | Leave S (Days at sea) blank, click Export JSON | Blocked; list "Line n: mandatory field(s) missing — S"; S outlined red; red clears when filled | ☐ |
+| C7 | 7 | No certificate / no surname / no CDN | Blocked with the matching message | ☐ |
+| C8 | 3 | Ice days 45 on a 39-day line | Ice box red, column R red, "More than days on board (39)"; Export blocked; clears when corrected | ☐ |
+| C9 | 3 | Ice condition ticked, days blank | Allowed (warning only in Findings) | ☐ |
+| C10 | 2 | Declaration unticked | Export blocked (v0.8.0 behaviour kept) | ☐ |
+| C11 | 9 | Export JSON when complete | File `CDN - SURNAME - UNVETTED QUALIFYING SEA SERVICE - M500NC - TOTAL OF X DAYS FROM … TO ….json` | ☐ |
+| C12 | 9 | Export PDF → Save as PDF | Suggested file name identical (without .json) | ☐ |
+| C13 | — | Save while incomplete | Allowed | ☐ |
 
-## E. Decisions confirmed for v0.8.0 (2026-11-26)
+## D. Examiner (`dev/examiner.html`)
 
-- [x] Special-service totals: overlapping dates within a service counted once.
-- [x] Ice approved days = candidate's entered days, limited to the line's approved days.
-- [x] Accepted = converted days; Accepted with adjustment = final days; Additional information required = final days if entered, else 0; Rejected = 0. "Not reviewed" removed from the choices; automatic status removed.
-- [x] Declaration required only for Export JSON and Export PDF / Print (Save allowed; no automatic untick).
+| # | Item | Test | Expected | Pass |
+|---|---|---|---|---|
+| D1 | 1 | Line with Polar waters / Acceptable ice / transfer operation | "Special service vetting" table: Automatic, Final accepted days, Reason per service | ☐ |
+| D2 | 1 | Line without those services | No vetting table | ☐ |
+| D3 | 1 | Status Rejected or not chosen | Service inputs disabled and cleared | ☐ |
+| D4 | 1 | Final service days above the line's counted days | Red box, error message; **Save draft refused** ("Not saved…"); Export refused | ☐ |
+| D5 | 1 | Final service days different from automatic | Reason box red until typed (warning) | ☐ |
+| D6 | 2 | Summary › Approved special service | Adjusted service shows **final** (adjusted — automatic N); others unchanged | ☐ |
+| D7 | 2 | Export JSON | `serviceReview` per line with automaticDays and finalAcceptedDays; summary has both totals | ☐ |
+| D8 | 10 | Click Export with name blank / a line without status / a verification box unticked | Blocked with a list; examiner name, status and unticked boxes highlighted in red | ☐ |
+| D9 | 11 | Review date | Shows today, read-only; saved in `examinerAssessment.reviewDate` | ☐ |
+| D10 | 9 | Export JSON / PDF when complete | `CDN - SURNAME - VETTED QUALIFYING SEA SERVICE - ACRONYM - TOTAL OF X DAYS FROM … TO …` with X = total final accepted days | ☐ |
+| D11 | 1–2 | PDF | Review table has a "Special service vetting" column (automatic → final, reason); summary shows the adjusted note; examiner name and review date | ☐ |
+| D12 | — | FR | All new labels and messages in French | ☐ |
+| D13 | — | Edge and Chrome | Same results | ☐ |
 
-Still to confirm (CALCULATION_RULES.md §7): day count; rounding down; days-under-way method when S ≠ R; MPR s. 117 for Supernumerary Mate. Not implemented: pilot service, CAF rates, MOU Tables III–VI, training remission, certificate eligibility.
+## E. Decisions confirmed for v0.9.0 (2026-11-27)
+
+- [x] One reason per adjusted service.
+- [x] Service figure above the line's counted days = error, capped; saving and exporting refused until corrected.
+- [x] Candidate ice days optional; a value above days on board must be corrected before export.
+- [x] Summary layout: final figure with "(adjusted — automatic N)".
+- [x] Days at sea mandatory (always a number).
+- [x] File names: candidate UNVETTED with total converted days; examiner VETTED with total final accepted days; dates = earliest engagement to latest discharge.
+- [x] Examiner: five verification boxes and a status on every line, and the examiner name, before export.
+- [x] Older records: not required for this release (existing conversion kept); ask again next version.
+
+To confirm: certificate acronyms (CALCULATION_RULES.md §7); open rules in §8.
 
 ## F. Sign-off
 
@@ -74,4 +77,4 @@ Still to confirm (CALCULATION_RULES.md §7): day count; rounding down; days-unde
 
 ## G. Rollback
 
-Revert the merge commit (INSTALL.md "Undo"). Storage keys are unchanged in v0.8.0. Examiner drafts saved with v0.8.0 open in v0.7.0 (the basis is "None", so v0.7.0 compares with converted days).
+Revert the merge commit (INSTALL.md "Undo"). Storage keys unchanged. Records saved with v0.9.0 open in v0.8.0 (the extra `serviceReview` data is ignored there).
