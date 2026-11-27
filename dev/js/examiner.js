@@ -1,5 +1,11 @@
 /**
- * Examiner review page controller — v0.8.0 development build.
+ * Examiner review page controller — v0.9.0 development build.
+ *
+ * v0.9.0: special-service vetting (ice conditions, transfer operations) per line; summary shows the
+ * final figure with the automatic one when adjusted; examiner name, a status and the five verification
+ * boxes on every line are required before Export JSON / PDF; over-limit service figures block saving
+ * and export; review date shown automatically; file name "… VETTED QUALIFYING SEA SERVICE …".
+ *
  *
  * v0.8.0: examiner basis removed; Final accepted days enabled only for "Accepted with adjustment"
  * and "Additional information required"; "Not reviewed" is only the starting state;
@@ -19,7 +25,9 @@ import { TEXT, t } from "./examinerI18n.js";
 import { CAPACITIES, VESSEL_TYPES, CERTIFICATES, PROPULSION, VOYAGE_CLASSES, labelFor } from "./referenceData.js";
 import { applyExaminerReview, EXAMINER_INPUT_FIELDS } from "./examinerReview.js";
 import { validateVoyage, reasonNeeded, reasonMissing } from "./validationEngine.js";
-import { specializedParts, examinerPrintHtml, printRecord, fileStem } from "./printView.js";
+import { specializedParts, examinerPrintHtml, exportBlockedPrintHtml, printRecord } from "./printView.js";
+import { exportFileName, todayIso } from "./recordRules.js";
+import { serviceVettingEnabled } from "./serviceVetting.js";
 import { buildSummary } from "./summaryEngine.js";
 import { toNumberOrNull, recalculateVoyages, finalDaysEnabled } from "./calculationEngine.js";
 import { RULES_VERSION } from "./tp2293Engine.js";
@@ -81,12 +89,63 @@ function voyageRowHtml(v, i) {
     <td>${show(d.embarkationDate)}</td>
     <td>${show(d.disembarkationDate)}</td>
     <td class="num" data-col="daysOnBoard">${show(d.daysOnBoard)}</td>
-    <td class="num" data-col="daysAtSea">${d.daysAtSeaDifferent ? show(d.daysAtSeaEntered) : ""}</td>
+    <td class="num" data-col="daysAtSea">${show(d.daysAtSeaEntered)}</td>
     <td class="num" data-col="convertedDays">${convertedText(v)}</td>`;
 }
 
+const VERIFICATION_FIELDS = ["vesselVerified", "capacityVerified", "datesVerified", "specializedServiceVerified", "supportingDocumentsVerified"];
+
+/** v0.9.0 — special-service vetting rows (ice conditions, transfer operation) for one line; built once per render. */
+function serviceVettingHtml(v, i) {
+  const codes = Object.keys(v.examinerReview.serviceReview || {});
+  if (!codes.length) return "";
+  const rows = codes.map((code) => `<tr data-service="${code}">
+      <td>${esc(t(language, code))}</td>
+      <td class="num svcAuto"></td>
+      <td><input type="number" min="0" step="1" inputmode="numeric" data-sfield="finalAcceptedDays" id="svc-${code}-final-${i}" aria-label="${esc(t(language, code))} — ${esc(t(language, "serviceFinal"))}"></td>
+      <td><input data-sfield="adjustmentReason" id="svc-${code}-reason-${i}" aria-label="${esc(t(language, code))} — ${esc(t(language, "serviceReason"))}"></td></tr>`).join("");
+  return `<fieldset class="serviceVetting"><legend>${esc(t(language, "serviceVetting"))}</legend>
+    <table class="svcTable"><thead><tr><th></th><th>${esc(t(language, "serviceAutomatic"))}</th><th>${esc(t(language, "serviceFinal"))}</th><th>${esc(t(language, "serviceReason"))}</th></tr></thead>
+    <tbody>${rows}</tbody></table></fieldset>`;
+}
+
+function readServiceInputs(panel) {
+  const out = {};
+  panel.querySelectorAll(".svcTable tr[data-service]").forEach((tr) => {
+    out[tr.dataset.service] = {
+      finalAcceptedDays: toNumberOrNull(tr.querySelector("[data-sfield=finalAcceptedDays]").value),
+      adjustmentReason: tr.querySelector("[data-sfield=adjustmentReason]").value
+    };
+  });
+  return out;
+}
+
+function writeServiceInputs(panel, review) {
+  panel.querySelectorAll(".svcTable tr[data-service]").forEach((tr) => {
+    const e = review.serviceReview?.[tr.dataset.service] || {};
+    tr.querySelector("[data-sfield=finalAcceptedDays]").value = e.finalAcceptedDays ?? "";
+    tr.querySelector("[data-sfield=adjustmentReason]").value = e.adjustmentReason ?? "";
+  });
+}
+
+function refreshServiceInputs(panel, v) {
+  const r = v.examinerReview;
+  const enabled = serviceVettingEnabled(r.reviewStatus);
+  panel.querySelectorAll(".svcTable tr[data-service]").forEach((tr) => {
+    const e = r.serviceReview?.[tr.dataset.service];
+    tr.querySelector(".svcAuto").textContent = e ? String(e.automaticDays) : "—";
+    const final = tr.querySelector("[data-sfield=finalAcceptedDays]");
+    const reason = tr.querySelector("[data-sfield=adjustmentReason]");
+    for (const el of [final, reason]) { el.disabled = !enabled; if (!enabled) el.value = ""; }
+    final.placeholder = e ? String(e.automaticDays) : "";
+    final.classList.toggle("svcOverLimit", Boolean(e?.overLimit || e?.invalid));
+    final.setAttribute("aria-invalid", String(Boolean(e?.overLimit || e?.invalid)));
+    reason.classList.toggle("svcReasonMissing", Boolean(e?.reasonMissing));
+  });
+}
+
 function readPanel(panel) {
-  const input = {};
+  const input = { serviceReview: readServiceInputs(panel) };
   panel.querySelectorAll("[data-field]").forEach((el) => {
     const f = el.dataset.field;
     if (el.type === "checkbox") input[f] = el.checked;
@@ -102,6 +161,7 @@ function writePanel(panel, review) {
     if (el.type === "checkbox") el.checked = Boolean(review[f]);
     else el.value = review[f] ?? "";
   });
+  writeServiceInputs(panel, review);
 }
 
 function refreshLine(index) {
@@ -122,6 +182,9 @@ function refreshLine(index) {
   panel.querySelector(".calcText").textContent = language === "fr" ? v.calculation.explanationFr : v.calculation.explanationEn;
   panel.querySelector(".basisDays").textContent = r.referenceDays === null ? t(language, "notCalculated") : String(r.referenceDays);
   panel.querySelector(".countedDays").textContent = String(r.effectiveAcceptedDays ?? 0);
+  refreshServiceInputs(panel, v);
+  panel.querySelectorAll(".verifyGrid input").forEach((el) => { if (el.checked) el.closest("label").classList.remove("missingCheck"); });
+  if (r.reviewStatus !== "NOT_REVIEWED") panel.querySelector("[data-field=reviewStatus]").classList.remove("missingField");
 
   // Neutral "(required)" indicator when a reason is needed; red only while the reason is empty.
   const needed = reasonNeeded(v);
@@ -136,7 +199,7 @@ function refreshLine(index) {
 
   const errors = [...voyageResult.errors, ...result.errors];
   const warnings = [...voyageResult.warnings, ...result.warnings];
-  const warnClass = (c) => (c === "ADJUSTMENT_REASON_REQUIRED" ? "warning reasonMissing" : c === "STATUS_SET_AUTOMATICALLY" ? "warning info" : "warning");
+  const warnClass = (c) => (["ADJUSTMENT_REASON_REQUIRED", "SERVICE_REASON_REQUIRED"].includes(c) ? "warning reasonMissing" : c === "STATUS_SET_AUTOMATICALLY" ? "warning info" : "warning");
   panel.querySelector(".messages").innerHTML =
     errors.map((c) => `<li class="error" data-code="${c}">${esc(t(language, c))}</li>`).join("") +
     warnings.map((c) => `<li class="${warnClass(c)}" data-code="${c}">${esc(t(language, c))}</li>`).join("");
@@ -172,9 +235,15 @@ function refreshSummary() {
   $("sumInfo").textContent = s.examinerDetermination.recordsRequiringInformation;
   const cert = record.application.certificateAppliedFor?.code;
   $("sumCertificate").textContent = labelFor(CERTIFICATES, cert, language) || "—";
-  const services = Object.entries(s.examinerDetermination.specialServiceApprovedDays || {});
+  // v0.9.0 — final figures; "(adjusted — automatic N)" when the examiner changed a service figure.
+  const ed = s.examinerDetermination;
+  const services = Object.entries(ed.specialServiceApprovedDays || {});
   $("sumSpecialServices").innerHTML = services.length
-    ? services.map(([code, days]) => `<li data-service="${code}">${esc(t(language, code))}: <strong>${days}</strong></li>`).join("")
+    ? services.map(([code, days]) => {
+      const adjusted = ed.specialServiceAdjusted?.[code];
+      const note = adjusted ? ` <span class="adjustedTag">(${esc(t(language, "adjustedTag", { n: ed.specialServiceAutomaticDays?.[code] ?? 0 }))})</span>` : "";
+      return `<li data-service="${code}"${adjusted ? ' class="adjusted"' : ""}>${esc(t(language, code))}: <strong>${days}</strong>${note}</li>`;
+    }).join("")
     : `<li>${esc(t(language, "noSpecialService"))}</li>`;
   return linesWithErrors;
 }
@@ -228,6 +297,7 @@ function render() {
     tbody.appendChild(reviewRow);
 
     const panel = cell.querySelector(".reviewPanel");
+    panel.querySelector(".serviceVettingSlot").innerHTML = serviceVettingHtml(v, i);
     applyStaticText(panel);
     panel.querySelector(".reviewTitle").textContent = t(language, "examinerReview", { n: i + 1 });
     panel.querySelectorAll("[data-field]").forEach((el) => { el.name = `${el.dataset.field}-${i}`; el.id = `${el.dataset.field}-${i}`; });
@@ -252,12 +322,61 @@ function collectRecordLevel() {
   if (!record) return;
   record.examinerAssessment.generalComments = $("generalComments").value;
   record.examinerAssessment.examiner.examinerName = $("examinerName").value;
+  record.examinerAssessment.reviewDate = $("reviewDate").value || todayIso(); // v0.9.0 — date of the current day
+  $("examinerName").classList.toggle("missingField", $("examinerName").classList.contains("missingField") && !$("examinerName").value.trim());
 }
+
+/** v0.9.0 — lines with a special-service figure above the line's counted days. */
+const overLimitLines = () => record.voyages.map((v, i) => (Object.values(v.examinerReview.serviceReview || {}).some((e) => e.overLimit) ? i + 1 : null)).filter(Boolean);
+
+/**
+ * v0.9.0 — before Export JSON / Export PDF: examiner name, a status and all five verification
+ * boxes on every line, and no invalid values (special-service figures above the line's days included).
+ */
+function examinerExportProblems() {
+  const items = [];
+  if (!String($("examinerName").value || "").trim()) items.push(["EXAMINER_NAME_REQUIRED", {}]);
+  record.voyages.forEach((v, i) => {
+    const r = v.examinerReview;
+    const n = i + 1;
+    if (r.reviewStatus === "NOT_REVIEWED") items.push(["lineStatusRequired", { n }]);
+    if (VERIFICATION_FIELDS.some((f) => !r[f])) items.push(["lineVerificationRequired", { n }]);
+    if (Object.values(r.serviceReview || {}).some((e) => e.overLimit)) items.push(["lineServiceOverLimit", { n }]);
+    else if (lineErrorState.get(i)) items.push(["lineHasErrors", { n }]);
+  });
+  return items;
+}
+
+function showBlocked(titleKey, items) {
+  lastStatus = { key: titleKey, vars: {}, kind: "status-warning" };
+  const p = $("statusPanel");
+  p.className = "status-warning";
+  p.innerHTML = `<strong>${esc(t(language, titleKey))}</strong><ul class="blockList">${items.map(([k, vars]) => `<li data-code="${k}">${esc(t(language, k, vars))}</li>`).join("")}</ul>`;
+  p.scrollIntoView?.({ behavior: "smooth", block: "center" });
+}
+
+function exportAllowed() {
+  collectRecordLevel();
+  record.voyages.forEach((_, i) => onPanelInput(i));
+  const items = examinerExportProblems();
+  $("examinerName").classList.toggle("missingField", !String($("examinerName").value || "").trim());
+  document.querySelectorAll(".reviewRow").forEach((row) => {
+    const r = record.voyages[Number(row.dataset.index)].examinerReview;
+    row.querySelectorAll(".verifyGrid input").forEach((el) => el.closest("label").classList.toggle("missingCheck", !el.checked));
+    row.querySelector("[data-field=reviewStatus]").classList.toggle("missingField", r.reviewStatus === "NOT_REVIEWED");
+  });
+  if (items.length) { showBlocked("examinerExportBlocked", items); return false; }
+  return true;
+}
+
+const vettedFileName = () => exportFileName(record, "VETTED", record.calculationSummary?.examinerDetermination?.totalFinalAcceptedDays ?? 0);
 
 function save() {
   if (!record) return setStatus("noRecord", {}, "status-warning");
   collectRecordLevel();
   record.voyages.forEach((_, i) => onPanelInput(i));
+  const over = overLimitLines();
+  if (over.length) return showBlocked("saveBlocked", over.map((n) => ["lineServiceOverLimit", { n }]));
   const errorLines = refreshSummary();
   record.auditTrail.push({ at: new Date().toISOString(), action: "EXAMINER_DRAFT_SAVED", by: record.examinerAssessment.examiner.examinerName || null });
   storage.saveRecord(record);
@@ -267,11 +386,11 @@ function save() {
 
 function exportJson() {
   if (!record) return setStatus("noRecord", {}, "status-warning");
-  collectRecordLevel();
+  if (!exportAllowed()) return;
   const blob = new Blob([storage.exportRecord(record)], { type: "application/json" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `${fileStem(record)}-examiner.json`;
+  link.download = `${vettedFileName()}.json`;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -282,14 +401,17 @@ function fillPrintView() {
   if (!record) { $("printView").innerHTML = ""; return; }
   collectRecordLevel();
   record.voyages.forEach((_, i) => onPanelInput(i));
-  $("printView").innerHTML = examinerPrintHtml(record, record.calculationSummary, language);
+  $("printView").innerHTML = examinerExportProblems().length
+    ? exportBlockedPrintHtml(language, "examinerExportBlocked")
+    : examinerPrintHtml(record, record.calculationSummary, language);
 }
 
 function exportPdf() {
   if (!record) return setStatus("noRecord", {}, "status-warning");
+  if (!exportAllowed()) return;
   fillPrintView();
   setStatus("pdfHint");
-  printRecord($("printView").innerHTML, `${fileStem(record)}-examiner`);
+  printRecord($("printView").innerHTML, vettedFileName());
 }
 
 function switchLanguage() {
@@ -325,6 +447,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("beforeprint", fillPrintView);
   $("generalComments").addEventListener("input", collectRecordLevel);
   $("examinerName").addEventListener("input", collectRecordLevel);
+  $("reviewDate").value = todayIso(); // v0.9.0 — shown automatically, today's date
   switchLanguage();
   setStatus("noRecord", {}, "");
 });

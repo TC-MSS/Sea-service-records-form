@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = "0.5.0";
-export const APPLICATION_VERSION = "0.8.0";
+export const APPLICATION_VERSION = "0.9.0";
 
 export const ENUMS = Object.freeze({
   recordStatus: ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "ADDITIONAL_INFORMATION_REQUIRED", "ASSESSMENT_COMPLETED", "CLOSED"],
@@ -44,6 +44,8 @@ export function createExaminerReview() {
     effectiveAcceptedDays: 0,
     acceptedDaysSource: "NONE",
     statusSetAutomatically: false,
+    // v0.9.0 — examiner vetting of ice and transfer-operation days, per service code.
+    serviceReview: {},
     adjustmentRequired: false,
     adjustmentReasonCode: null,
     adjustmentReason: "",
@@ -128,6 +130,7 @@ export function createSeaServiceRecord(language = "en") {
       assessmentConclusion: "NOT_DETERMINED", additionalInformationRequired: false,
       additionalInformationDetails: "", generalComments: "",
       examiner: { examinerId: null, examinerName: "", office: "" },
+      reviewDate: null,
       startedAt: null, completedAt: null, rulesVersion: null, applicationVersion: APPLICATION_VERSION
     },
     auditTrail: []
@@ -143,6 +146,8 @@ export function createEmptySummary() {
       totalFinalAcceptedDays: 0, totalFinalAcceptedMonths: 0, differenceFromConverted: null,
       // v0.8.0 — approved days per special service selected on at least one line; overlapping dates counted once.
       specialServiceApprovedDays: {},
+      // v0.9.0 — automatic figures for comparison, and which services were adjusted by the examiner.
+      specialServiceAutomaticDays: {}, specialServiceAdjusted: {},
       linesWithFinalDays: 0, linesMissingAdjustmentReason: 0
     },
     specializedService: { polarDays: 0, acceptableIceDays: 0, oilTransferDays: 0, chemicalTransferDays: 0, gasTransferDays: 0, passengerServiceDays: 0, fishingServiceDays: 0, dynamicPositioningDays: 0, offshoreServiceDays: 0 },

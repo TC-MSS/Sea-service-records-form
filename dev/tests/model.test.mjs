@@ -345,3 +345,105 @@ test("v0.8.0 item 1: capacity MATE is 'Mate in Charge of a Watch' / 'Officier de
   assert.equal(labelFor(CAPACITIES, "MATE", "fr"), "Officier de pont en charge du quart à la passerelle");
   assert.equal(labelFor(CAPACITIES, "SUPERNUMERARY_MATE", "en"), "Supernumerary Mate");
 });
+
+// ---------------- v0.9.0 ----------------
+import { candidateExportCheck, exportFileName, serviceDateRange, certificateAcronym, certificateDepartment, CERTIFICATE_INFO } from "../js/recordRules.js";
+import { VOYAGE_CLASSES, CERTIFICATES } from "../js/referenceData.js";
+
+function fullRecord() {
+  const r = migrateRecordToV050(fixture("legacy-v0.4.0.json"));
+  r.voyages[0].dates.daysAtSeaEntered = 30;
+  r.voyages[2].dates.daysAtSeaEntered = 29;
+  recalculateVoyages(r.voyages);
+  return r;
+}
+
+test("v0.9.0 item 7: mandatory fields by department before export (deck vs engine)", () => {
+  const r = fullRecord();
+  assert.equal(candidateExportCheck(r).ok, true, candidateExportCheck(r).lines.map((l) => l.missing).join());
+  r.voyages[1].vessel.grossTonnage = null;
+  r.voyages[1].vessel.propulsionPowerKw = null;
+  let c = candidateExportCheck(r);
+  assert.deepEqual(c.lines, [{ line: 2, missing: ["G"], errors: [] }], "deck: G missing, E not required");
+  r.application.certificateAppliedFor.code = "ENGINEER_2_MOTOR";
+  c = candidateExportCheck(r);
+  assert.deepEqual(c.lines, [{ line: 2, missing: ["E"], errors: [] }], "engine: E required, G and H not");
+  r.voyages[1].dates.daysAtSeaEntered = null;
+  r.candidate.declarationAccepted = false;
+  r.candidate.cdnNumber = "";
+  r.application.certificateAppliedFor.code = "";
+  c = candidateExportCheck(r);
+  assert.deepEqual(c.header, ["CERTIFICATE_REQUIRED", "CDN_REQUIRED", "DECLARATION_REQUIRED"]);
+  assert.deepEqual(c.lines[0].missing, ["G", "S"], "no certificate: deck list used");
+});
+
+test("v0.9.0 item 3: ice days above days on board block the candidate export; blank ice days do not", () => {
+  const r = fullRecord();
+  r.voyages[1].specializedService.iceConditions.POLAR.days = null; // selected, no days: allowed
+  recalculateVoyages(r.voyages);
+  assert.equal(candidateExportCheck(r).ok, true);
+  r.voyages[1].specializedService.iceConditions.POLAR.days = 40; // A = 39
+  recalculateVoyages(r.voyages);
+  const c = candidateExportCheck(r);
+  assert.equal(c.ok, false);
+  assert.deepEqual(c.lines, [{ line: 2, missing: [], errors: ["ICE_DAYS_EXCEED_ONBOARD"] }]);
+});
+
+test("v0.9.0 item 9: export file name, acronyms and date range", () => {
+  const r = fullRecord();
+  assert.deepEqual(serviceDateRange(r), { from: "2025-01-01", to: "2025-06-30" });
+  assert.equal(exportFileName(r, "UNVETTED", 129), "123456789 - TREMBLAY - UNVETTED QUALIFYING SEA SERVICE - M500NC - TOTAL OF 129 DAYS FROM 2025-01-01 TO 2025-06-30");
+  assert.equal(exportFileName(r, "VETTED", 90).split(" - ")[2], "VETTED QUALIFYING SEA SERVICE");
+  r.candidate.surname = "D'Amour/Côté";
+  assert.equal(exportFileName(r, "VETTED", 0).split(" - ")[1], "D'AMOUR CÔTÉ", "unsafe characters removed");
+  for (const [code] of CERTIFICATES) {
+    assert.ok(certificateAcronym(code), `acronym for ${code}`);
+    assert.ok(["DECK", "ENGINE"].includes(certificateDepartment(code)), `department for ${code}`);
+  }
+  assert.equal(new Set(Object.values(CERTIFICATE_INFO).map(([, a]) => a)).size, Object.keys(CERTIFICATE_INFO).length, "acronyms unique");
+});
+
+test("v0.9.0 item 8: NC1 / NC2 spelled out as Near Coastal", () => {
+  assert.equal(labelFor(VOYAGE_CLASSES, "NC1", "en"), "Near Coastal, Class 1");
+  assert.equal(labelFor(VOYAGE_CLASSES, "NC2", "fr"), "À proximité du littoral, classe 2");
+});
+
+test("v0.9.0 items 1–2: examiner vets ice and transfer days; over-limit is an error, summary shows final + automatic", () => {
+  const r = fullRecord();
+  const v = r.voyages[1]; // A = 39, converted 56, polar (no days), oil transfer
+  v.specializedService.iceConditions.POLAR.days = 30;
+  recalculateVoyages(r.voyages);
+  let res = applyExaminerReview(v, { reviewStatus: "ACCEPTED" });
+  assert.deepEqual(Object.keys(v.examinerReview.serviceReview), ["POLAR", "OIL_TRANSFER"]);
+  assert.equal(v.examinerReview.serviceReview.POLAR.automaticDays, 30);
+  assert.equal(v.examinerReview.serviceReview.OIL_TRANSFER.automaticDays, 56);
+
+  res = applyExaminerReview(v, { serviceReview: { POLAR: { finalAcceptedDays: 60 }, OIL_TRANSFER: { finalAcceptedDays: 50 } } });
+  assert.ok(res.errors.includes("SERVICE_DAYS_EXCEED_LINE"), "60 > 56 counted");
+  assert.equal(v.examinerReview.serviceReview.POLAR.effectiveDays, 56, "capped at the line's counted days");
+  assert.ok(res.warnings.includes("SERVICE_REASON_REQUIRED"));
+
+  res = applyExaminerReview(v, { serviceReview: { POLAR: { finalAcceptedDays: 25, adjustmentReason: "Ice log" }, OIL_TRANSFER: { finalAcceptedDays: 50, adjustmentReason: "Log" } } });
+  assert.equal(res.valid, true);
+  assert.ok(!res.warnings.includes("SERVICE_REASON_REQUIRED"));
+  r.voyages.forEach((x, i) => { if (i !== 1) applyExaminerReview(x, { reviewStatus: "ACCEPTED" }); });
+  const e = buildSummary(r.voyages).examinerDetermination;
+  assert.equal(e.specialServiceApprovedDays.POLAR, 25);
+  assert.equal(e.specialServiceAutomaticDays.POLAR, 30);
+  assert.equal(e.specialServiceAdjusted.POLAR, true);
+  assert.equal(e.specialServiceApprovedDays.OIL_TRANSFER, 50);
+  assert.equal(e.specialServiceAdjusted.PASSENGER, false, "only ice and transfer are vetted");
+
+  applyExaminerReview(v, { reviewStatus: "REJECTED" });
+  assert.equal(v.examinerReview.serviceReview.POLAR.finalAcceptedDays, null, "cleared when the line counts 0");
+  assert.equal(v.examinerReview.serviceReview.POLAR.effectiveDays, 0);
+  assert.equal(buildSummary(r.voyages).examinerDetermination.specialServiceApprovedDays.OIL_TRANSFER, 0);
+});
+
+test("v0.9.0: an examiner draft with service figures survives save and reload (normalisation)", () => {
+  const r = fullRecord();
+  applyExaminerReview(r.voyages[1], { reviewStatus: "ACCEPTED", serviceReview: { OIL_TRANSFER: { finalAcceptedDays: 40, adjustmentReason: "x" } } });
+  const again = migrateRecordToV050(JSON.parse(JSON.stringify(r)));
+  assert.equal(again.voyages[1].examinerReview.serviceReview.OIL_TRANSFER.finalAcceptedDays, 40);
+  assert.equal(again.voyages[1].examinerReview.serviceReview.OIL_TRANSFER.effectiveDays, 40);
+});

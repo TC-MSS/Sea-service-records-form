@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sea Service Records — Examiner Review (development v0.8.0)</title>
+<title>Sea Service Records — Examiner Review (development v0.9.0)</title>
 <link rel="stylesheet" href="../css/app.css">
 <link rel="stylesheet" href="css/examiner.css">
 </head>
 <body>
 
 <header class="banner">
-  <h1 data-i18n="pageTitle">Sea Service Records — Examiner Review (development v0.8.0)</h1>
+  <h1 data-i18n="pageTitle">Sea Service Records — Examiner Review (development v0.9.0)</h1>
   <select id="langSelector" aria-label="Language / Langue">
     <option value="en">English</option>
     <option value="fr">Français</option>
@@ -66,7 +66,7 @@
       <th data-i18n="embark">P<br>Embark</th>
       <th data-i18n="disembark">Q<br>Disembark</th>
       <th data-i18n="daysOnBoard">R<br>Days on board</th>
-      <th data-i18n="daysAtSea">S<br>Days at sea, if different</th>
+      <th data-i18n="daysAtSea">S<br>Days at sea</th>
       <th data-i18n="convertedDays">T<br>Converted days</th>
     </tr></thead>
     <tbody id="recordsBody"></tbody>
@@ -79,7 +79,7 @@
   <div class="reviewPanel">
     <h3><span class="reviewTitle">Examiner review</span> <span class="examinerOnlyTag" data-i18n="examinerOnly">Examiner only</span></h3>
     <fieldset class="verifyGrid">
-      <legend data-i18n="verification">Verification</legend>
+      <legend><span data-i18n="verification">Verification</span> <span class="reqStar">*</span></legend>
       <label><input type="checkbox" data-field="vesselVerified"> <span data-i18n="vesselVerified">Vessel verified</span></label>
       <label><input type="checkbox" data-field="capacityVerified"> <span data-i18n="capacityVerified">Capacity verified</span></label>
       <label><input type="checkbox" data-field="datesVerified"> <span data-i18n="datesVerified">Dates verified</span></label>
@@ -87,7 +87,7 @@
       <label><input type="checkbox" data-field="supportingDocumentsVerified"> <span data-i18n="supportingDocumentsVerified">Supporting documents verified</span></label>
     </fieldset>
     <div class="reviewGrid">
-      <label><span data-i18n="reviewStatus">Review status</span>
+      <label><span><span data-i18n="reviewStatus">Review status</span> <span class="reqStar">*</span></span>
         <select data-field="reviewStatus">
           <option value="NOT_REVIEWED" data-i18n="selectStatus" disabled hidden>Select a status</option>
           <option value="ACCEPTED" data-i18n="ACCEPTED">Accepted</option>
@@ -108,6 +108,7 @@
         <textarea rows="2" data-field="examinerComments"></textarea>
       </label>
     </div>
+    <div class="serviceVettingSlot"></div>
     <p class="calcExplanation"><strong data-i18n="calculation">Calculation (TP 2293 / MPR)</strong>: <span class="calcText"></span></p>
     <ul class="messages" aria-live="polite"></ul>
   </div>
@@ -116,7 +117,10 @@
 <section>
   <h2 data-i18n="generalAssessment">General examiner comments</h2>
   <div class="grid2">
-    <label><span data-i18n="examinerName">Examiner name</span><input id="examinerName"></label>
+    <div class="nameDate">
+      <label><span data-i18n="examinerName">Examiner name</span> <span class="reqStar">*</span><input id="examinerName" required></label>
+      <label><span data-i18n="reviewDate">Review date</span><input id="reviewDate" type="date" readonly></label>
+    </div>
     <label class="wide"><span data-i18n="generalComments">General comments</span><textarea id="generalComments" rows="3"></textarea></label>
   </div>
 </section>

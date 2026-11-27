@@ -1,6 +1,6 @@
-# Sea Service Calculation Rules — v0.8.0
+# Sea Service Calculation Rules — v0.9.0
 
-Rules version stored with every calculated line (`calculation.calculationRuleVersion`): `TP2293-CH3_MPR-115-117_v1.0` — unchanged in v0.7.0 and v0.8.0 (`dev/js/tp2293Engine.js` was not modified).
+Rules version stored with every calculated line (`calculation.calculationRuleVersion`): `TP2293-CH3_MPR-115-117_v1.0` — unchanged in v0.7.0, v0.8.0 and v0.9.0 (`dev/js/tp2293Engine.js` was not modified).
 
 **v0.7.0:** the production candidate form (`index.html`) now uses this same engine, through `dev/js/candidate.js`. The candidate, development and examiner pages therefore always show the same column R and column T figures. On the candidate pages the results are labelled *Unvetted sea service — subject to examiner review / Service en mer non vérifié — sous réserve de l’examen par l’examinateur*.
 
@@ -24,6 +24,8 @@ Sources: TP 2293 Chapter 3 (pages 28–38 of TP 2293F, in the project) and the M
 A = days on board (R1); B = days at sea / under way entered in column S.
 
 **Capacity labels (v0.8.0):** code `MATE` is shown as **"Mate in Charge of a Watch" / "Officier de pont en charge du quart à la passerelle"** (was "Mate" / "Officier de pont"). The code is unchanged, so saved records and the rules are unaffected. R6 still applies only to `SUPERNUMERARY_MATE`.
+
+**Labels (v0.9.0):** voyage codes `NC1` / `NC2` are shown as **"Near Coastal, Class 1 / 2"** / **"À proximité du littoral, classe 1 / 2"** (codes unchanged). Column S is now **"Days at sea"** and is mandatory (see §7): when S equals R the normal rule applies; when S is lower the days-under-way method (R5) applies, as before.
 
 **Rounding:** credited days are rounded **down** to whole days. No partial day is credited. The unrounded value is kept in `calculation.convertedDaysExact`.
 
@@ -98,6 +100,24 @@ Shown for each special service that is selected on at least one line: Polar wate
 
 Example (unit test): oil transfer on 1–31 Jan (30 days) and 21 Jan–10 Feb (20 days), both accepted → 30 + 20 − 10 overlapping days = **40**.
 
+### 5b. Examiner vetting of ice and transfer-operation days (v0.9.0)
+
+On each line where Polar waters, Acceptable ice service or a transfer operation (oil / chemical / gas) is selected, the examiner sees one row per service: **Automatic** (the §5a figure), **Final accepted days** and **Reason**.
+
+| Situation | Figure used for the service on that line |
+|---|---|
+| Final accepted days blank | the automatic figure |
+| Final accepted days entered, ≤ the line's counted days | the final figure |
+| Final accepted days above the line's counted days | **error** `SERVICE_DAYS_EXCEED_LINE`; the figure is capped at the line's counted days, and **Save draft, Export JSON and Export PDF are refused** until it is corrected |
+| Negative or fractional | error `SERVICE_DAYS_INVALID`, counts 0 |
+| Line Rejected or without a status | inputs disabled and cleared; counts 0 |
+
+A reason is needed (per service) when the final figure differs from the automatic one: warning `SERVICE_REASON_REQUIRED`, red until typed, never a block.
+
+**Summary:** "Approved special service" uses the final figures (overlapping dates still counted once). When the examiner adjusted a service on any line it shows **final** (adjusted — automatic N), e.g. "Polar waters: **25** (adjusted — automatic 30)". Passenger, fishing, DP and offshore remain automatic.
+
+**JSON:** per line `examinerReview.serviceReview[code] = { automaticDays, finalAcceptedDays, adjustmentReason, effectiveDays, adjusted, overLimit, invalid, reasonMissing }`; in the summary `specialServiceApprovedDays` (final), `specialServiceAutomaticDays` and `specialServiceAdjusted`.
+
 ## 6. Column K — ice service (v0.7.0)
 
 Column K keeps the two conditions (Polar waters; Acceptable ice service). Both can be selected, and each has its own number of days entered by the candidate. Typing days ticks the condition; unticking clears the days.
@@ -106,7 +126,52 @@ Stored as `specializedService.iceConditions = { POLAR: {selected, days}, ACCEPTA
 
 Checks: condition selected without days → warning `ICE_DAYS_NOT_STATED`; days above days on board → error `ICE_DAYS_EXCEED_ONBOARD`; negative or fractional days → error `ICE_DAYS_INVALID`. The ice days are not converted and do not change column T; they are totalled in the summary ("Polar waters (days entered)", "Acceptable ice service (days entered)") for the examiner. The two conditions may overlap, so no combined limit is applied.
 
-## 7. Decisions still to confirm (unchanged since v0.6.0 — not implemented in v0.8.0)
+## 7. Export requirements and file names (v0.9.0)
+
+### Candidate (production and development candidate pages)
+
+Export JSON and Export PDF / Print are refused, with a list of what to fix, until:
+
+- the certificate applied for, surname and CDN number are entered (they form the file name);
+- the Applicant Declaration is ticked (v0.8.0);
+- every line has the **mandatory fields for the department of the certificate sought** (EXN 2). Mandatory columns are marked * in the table header and outlined in red after a refused export:
+
+| Department | Certificates | Mandatory columns |
+|---|---|---|
+| Deck | Master, Chief Mate, Watchkeeping Mate (all), Fishing Master 1–4, Able Seafarer, Bridge Watch Rating | A capacity, B vessel, C official number, D vessel type, **G gross tonnage, H class of voyage**, I port of registry, J watch, P engagement, Q discharge, S days at sea |
+| Engine | Engineer 1st–4th class (motor / steam), Watchkeeping Engineer fishing, SVMO, Engine-room Rating | A, B, C, D, **E main engine power (kW)**, I, J, P, Q, S |
+
+- no ice-condition days exceed the line's days on board (`ICE_DAYS_EXCEED_ONBOARD`). Ice days themselves are optional. The excess is highlighted on the line (red ice-days box, red column R, message "More than days on board (n)") as the candidate types.
+
+Save (in the browser) is always allowed. The application date is filled with today's date when empty and stays editable.
+
+### Examiner
+
+Export JSON and Export PDF / Print are refused until the examiner name is entered and, **on every line**, a review status is chosen and all five verification boxes are ticked, and no line has invalid values (including a service figure above the line's counted days). The review date shows today's date automatically (read-only) and is saved in `examinerAssessment.reviewDate`.
+
+### File names
+
+`CDN - SURNAME - UNVETTED QUALIFYING SEA SERVICE - ACRONYM - TOTAL OF X DAYS FROM YYYY-MM-DD TO YYYY-MM-DD` (candidate; X = total converted days)
+`CDN - SURNAME - VETTED QUALIFYING SEA SERVICE - ACRONYM - TOTAL OF X DAYS FROM YYYY-MM-DD TO YYYY-MM-DD` (examiner; X = total final accepted days)
+
+FROM = earliest engagement date, TO = latest discharge date on the record. Surname in capitals; characters not allowed in Windows file names are removed. The PDF name is suggested through the page title (Edge / Chrome "Save as PDF").
+
+| Certificate | Acronym | Certificate | Acronym |
+|---|---|---|---|
+| Master Mariner | MM | First-class Engineer, Motor / Steam | 1EM / 1ES |
+| Master, Near Coastal | MNC | Second-class Engineer, Motor / Steam | 2EM / 2ES |
+| Master 3 000 GT, Near Coastal | M3000NC | Third-class Engineer, Motor / Steam | 3EM / 3ES |
+| Master 500 GT, Near Coastal | M500NC | Fourth-class Engineer, Motor / Steam | 4EM / 4ES |
+| Master 3 000 GT, Domestic | M3000D | Watchkeeping Engineer, Motor-driven Fishing Vessel | WKEF |
+| Master 500 GT, Domestic | M500D | Small Vessel Machinery Operator | SVMO |
+| Master 150 GT, Domestic | M150D | Engine-room Rating | ERR |
+| Master, Limited | ML | Able Seafarer | AS |
+| Chief Mate / Chief Mate, Near Coastal | CM / CMNC | Bridge Watch Rating | BWR |
+| Watchkeeping Mate / … Near Coastal | WKM / WKMNC | Fishing Master 1st–4th class | FM1–FM4 |
+
+*The acronyms are a proposal; confirm or correct them (`dev/js/recordRules.js`, `CERTIFICATE_INFO`).*
+
+## 8. Decisions still to confirm (not implemented in v0.9.0)
 
 These points are interpretations made for this build. Please confirm them with the examination unit:
 
@@ -114,4 +179,6 @@ These points are interpretations made for this build. Please confirm them with t
 2. **Rounding down** to whole days, rather than rounding to nearest (the old production calculator used rounding to nearest).
 3. **Choice of method.** The days-under-way method (s. 3.7) is applied whenever column S differs from R. If the vessel carried passengers or cargo, the examiner should use "Accepted with adjustment" and enter the final accepted days (the examiner basis was removed in v0.8.0).
 4. **Junior officer.** MPR s. 117 is applied to the capacity "Supernumerary Mate" for every certificate type. The section refers to Master or Mate certificates.
-5. **Not yet implemented:** pilot service (s. 3.16, 2/3 up to 3 months), Canadian Forces rates (Table II), MOU Tables III–VI, approved training program remission (s. 3.22), fitting-out / lay-up / refit limits in the certificate tables, and certificate eligibility (minimum tonnage, voyage class, kW, months per certificate).
+5. **Backward compatibility (v0.9.0):** you said older records need not be guaranteed for this release; the existing conversion code was kept and still loads them, but it was not extended or re-verified beyond the existing tests. Ask again for the next version.
+6. **Passenger, fishing, DP and offshore** — should they also get examiner-adjustable figures?
+7. **Not yet implemented:** pilot service (s. 3.16, 2/3 up to 3 months), Canadian Forces rates (Table II), MOU Tables III–VI, approved training program remission (s. 3.22), fitting-out / lay-up / refit limits in the certificate tables, and certificate eligibility (minimum tonnage, voyage class, kW, months per certificate).

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Statement of Sea Service for a Certificate (development v0.8.0)</title>
+<title>Statement of Sea Service for a Certificate (development v0.9.0)</title>
 <link rel="stylesheet" href="../css/app.css">
 <link rel="stylesheet" href="css/examiner.css">
 <link rel="stylesheet" href="css/candidate.css">
@@ -11,7 +11,7 @@
 <body data-variant="development">
 
 <header class="banner">
-  <h1 data-i18n="candidatePageTitle">Statement of Sea Service for a Certificate (development v0.8.0)</h1>
+  <h1 data-i18n="candidatePageTitle">Statement of Sea Service for a Certificate (development v0.9.0)</h1>
   <select id="langSelector" aria-label="Language / Langue">
     <option value="en">English</option>
     <option value="fr">Français</option>
@@ -60,7 +60,7 @@
       <th data-i18n="embark">P<br>Embark</th>
       <th data-i18n="disembark">Q<br>Disembark</th>
       <th data-i18n="daysOnBoard">R<br>Days on board</th>
-      <th data-i18n="daysAtSea">S<br>Days at sea, if different</th>
+      <th data-i18n="daysAtSea">S<br>Days at sea</th>
       <th data-i18n="convertedDaysUnvetted">T<br>Converted days (unvetted)</th>
       <th data-i18n="actions">Actions</th>
     </tr></thead>
@@ -68,6 +68,7 @@
   </table>
   </div>
   <button type="button" id="btnAdd" data-i18n="addVoyage">Add voyage</button>
+  <p class="note mandatoryNote" data-i18n="mandatoryNote">Fields marked * are mandatory for the certificate applied for before Export JSON or Export PDF / Print (deck: A, B, C, D, G, H, I, J, P, Q, S; engine: A, B, C, D, E, I, J, P, Q, S).</p>
 </section>
 
 <section>
@@ -115,7 +116,7 @@
     <button type="button" id="btnPrint" data-i18n="exportPdf">Export PDF / Print</button>
     <button type="button" id="btnNew" data-i18n="newRecord">New record</button>
   </div>
-  <p class="note" data-i18n="storageNote">Your record is saved only in this browser on this computer. To send it to the examiner, use Export JSON and attach the file to your e-mail. Use Export PDF / Print for a paper or PDF copy.</p>
+  <p class="reminder" role="note" data-i18n="storageReminder">Reminder: your record is saved only in this browser on this computer. To submit it for review, send to the examiner of your local Transport Canada Centre: the JSON file (Export JSON), the discharge book entries and the testimonials for each of the entries.</p>
   <div id="statusPanel" role="status" aria-live="polite"></div>
 </section>
 

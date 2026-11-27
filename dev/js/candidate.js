@@ -1,5 +1,10 @@
 /**
- * Candidate form controller — v0.8.0 (v0.8.0: Applicant Declaration mandatory before Export JSON / PDF).
+ * Candidate form controller — v0.9.0.
+ * v0.9.0: mandatory fields by certificate department (EXN 2), ice days above days on board
+ * highlighted on the line and blocking export, "Days at sea" mandatory, file names
+ * "CDN - SURNAME - UNVETTED QUALIFYING SEA SERVICE - …", application date defaults to today,
+ * reminder of what to send to the Transport Canada Centre examiner.
+ * v0.8.0: Applicant Declaration mandatory before Export JSON / PDF.
  * Shared by the PRODUCTION candidate page (index.html, through js/app.js) and the
  * development candidate page (dev/index.html). <body data-variant="production|development">
  * selects the page title; everything else is identical, so both pages always apply the
@@ -21,7 +26,8 @@ import { recalculateVoyages, toNumberOrNull } from "./calculationEngine.js";
 import { validateVoyage } from "./validationEngine.js";
 import { buildSummary } from "./summaryEngine.js";
 import * as storage from "./storageEngine.js";
-import { candidatePrintHtml, declarationMissingPrintHtml, printRecord, fileStem } from "./printView.js";
+import { candidatePrintHtml, exportBlockedPrintHtml, printRecord } from "./printView.js";
+import { candidateExportCheck, certificateDepartment, MANDATORY_COLUMNS, FIELD_PATHS, iceExceeding, exportFileName, todayIso } from "./recordRules.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -103,7 +109,7 @@ function rowHtml(v, i) {
     <td><input type="date" data-path="dates.embarkationDate" value="${val("dates.embarkationDate")}"></td>
     <td><input type="date" data-path="dates.disembarkationDate" value="${val("dates.disembarkationDate")}"></td>
     <td class="num" data-col="daysOnBoard"></td>
-    <td><input type="number" min="0" data-path="dates.daysAtSeaEntered" value="${v.dates.daysAtSeaDifferent ? val("dates.daysAtSeaEntered") : ""}"></td>
+    <td><input type="number" min="0" data-path="dates.daysAtSeaEntered" value="${val("dates.daysAtSeaEntered")}"></td>
     <td class="num" data-col="convertedDays"></td>
     <td><button type="button" class="deleteBtn">${esc(t(language, "deleteLine"))}</button></td>`;
 }
@@ -162,7 +168,9 @@ function refresh() {
     const v = record.voyages[i];
     row.querySelector("[data-col=daysOnBoard]").textContent = v.dates.daysOnBoard ?? "";
     row.querySelector("[data-col=convertedDays]").innerHTML = convertedCell(v);
+    markIceExceeding(row, v);
   });
+  markMandatory();
   const s = buildSummary(record.voyages);
   record.calculationSummary = s;
   record.calculatedAt = new Date().toISOString();
@@ -203,6 +211,8 @@ function render() {
   $("surname").value = c.surname || "";
   $("givenNames").value = c.givenNames || "";
   $("cdn").value = c.cdnNumber || "";
+  // v0.9.0 — application date defaults to today; it stays editable.
+  if (!record.application.applicationDate) record.application.applicationDate = todayIso();
   $("applicationDate").value = record.application.applicationDate || "";
   $("applicantDeclaration").checked = Boolean(c.declarationAccepted);
   updateDeclarationState();
@@ -255,20 +265,68 @@ function save() {
 }
 
 /**
- * v0.8.0 — the Applicant Declaration is mandatory before Export JSON and Export PDF / Print.
- * Returns true when ticked; otherwise shows the caution, highlights the declaration and returns false.
+ * v0.9.0 — Column K: ice days above the line's days on board are highlighted on the line
+ * (ice-days box, column R and a short message in the cell), updated as the candidate types.
  */
-function declarationTicked() {
-  const ok = $("applicantDeclaration").checked;
+function markIceExceeding(row, v) {
+  const over = iceExceeding(v);
+  row.querySelectorAll(".iceOption").forEach((box) => {
+    const bad = over.includes(box.dataset.ice);
+    box.classList.toggle("iceExceed", bad);
+    let msg = box.querySelector(".iceMsg");
+    if (bad && !msg) { msg = document.createElement("div"); msg.className = "iceMsg"; box.appendChild(msg); }
+    if (msg) { msg.textContent = bad ? t(language, "iceExceedsCell", { n: v.dates.daysOnBoard }) : ""; if (!bad) msg.remove(); }
+  });
+  row.querySelector("[data-col=daysOnBoard]").classList.toggle("iceExceedR", over.length > 0);
+}
+
+/**
+ * v0.9.0 — mandatory columns (EXN 2) depend on the certificate applied for: "*" in the header;
+ * after a refused export, empty mandatory inputs are outlined in red until filled.
+ */
+function markMandatory() {
+  const dept = certificateDepartment($("certificate").value) || "DECK";
+  const cols = MANDATORY_COLUMNS[dept];
+  const ths = document.querySelectorAll("#serviceTable thead th");
+  Object.keys(FIELD_PATHS).forEach((letter) => ths[letter.charCodeAt(0) - 64]?.classList.toggle("mandatory", cols.includes(letter)));
+  const show = $("serviceTable").classList.contains("showRequired");
+  document.querySelectorAll("#recordsBody tr").forEach((row) => {
+    Object.entries(FIELD_PATHS).forEach(([letter, path]) => {
+      const el = row.querySelector(`[data-path="${path}"]`);
+      if (!el) return;
+      const missing = show && cols.includes(letter) && (el.value === "" || el.value === null);
+      el.classList.toggle("missingField", missing);
+    });
+  });
+}
+
+/**
+ * v0.9.0 — everything required before Export JSON / Export PDF / Print:
+ * certificate, surname, CDN, declaration, mandatory fields for the certificate's department,
+ * and ice days not above days on board. Shows the list and highlights what is missing.
+ */
+function exportAllowed() {
+  collectHeader();
+  refresh();
+  const check = candidateExportCheck(record);
   updateDeclarationState();
-  if (!ok) {
-    const section = $("declarationSection");
-    section.classList.add("declarationMissing");
-    setStatus("declarationRequired", "status-warning");
-    section.scrollIntoView?.({ behavior: "smooth", block: "center" });
-    $("applicantDeclaration").focus();
-  }
-  return ok;
+  if (check.ok) { $("serviceTable").classList.remove("showRequired"); markMandatory(); return true; }
+  $("serviceTable").classList.add("showRequired");
+  markMandatory();
+  if (check.header.includes("DECLARATION_REQUIRED")) $("declarationSection").classList.add("declarationMissing");
+  const items = [
+    ...check.header.map((c) => `<li data-code="${c}">${esc(t(language, c))}</li>`),
+    ...check.lines.flatMap((l) => [
+      ...(l.missing.length ? [`<li data-code="MISSING" data-line="${l.line}">${esc(t(language, "missingColumns", { n: l.line, cols: l.missing.join(", ") }))}</li>`] : []),
+      ...l.errors.map((c) => `<li data-code="${c}" data-line="${l.line}">${esc(t(language, "lineN", { n: l.line }))}: ${esc(t(language, c))}</li>`)
+    ])
+  ];
+  lastStatus = { key: "exportBlocked", kind: "status-warning" };
+  const p = $("statusPanel");
+  p.className = "status-warning";
+  p.innerHTML = `<strong>${esc(t(language, "exportBlocked"))}</strong><ul class="blockList">${items.join("")}</ul>`;
+  p.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  return false;
 }
 
 function updateDeclarationState() {
@@ -278,14 +336,14 @@ function updateDeclarationState() {
   if (ok) section.classList.remove("declarationMissing");
 }
 
+const fileName = () => exportFileName(record, "UNVETTED", record.calculationSummary?.automatedCalculation?.totalConvertedDays ?? 0);
+
 function exportJson() {
-  if (!declarationTicked()) return;
-  collectHeader();
-  refresh();
+  if (!exportAllowed()) return;
   const blob = new Blob([storage.exportRecord(record)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `${fileStem(record)}.json`;
+  a.download = `${fileName()}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -296,16 +354,16 @@ function fillPrintView() {
   if (!record) return;
   collectHeader();
   refresh();
-  $("printView").innerHTML = $("applicantDeclaration").checked
+  $("printView").innerHTML = candidateExportCheck(record).ok
     ? candidatePrintHtml(record, record.calculationSummary, language, t(language, titleKey()))
-    : declarationMissingPrintHtml(language);
+    : exportBlockedPrintHtml(language);
 }
 
 function exportPdf() {
-  if (!declarationTicked()) return;
+  if (!exportAllowed()) return;
   fillPrintView();
   setStatus("pdfHint", "status-success");
-  printRecord($("printView").innerHTML, fileStem(record));
+  printRecord($("printView").innerHTML, fileName());
 }
 
 async function importJson(e) {
@@ -342,6 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   ["surname", "givenNames", "cdn", "applicationDate", "certificate", "certificateHeld", "applicantDeclaration"]
     .forEach((id) => $(id).addEventListener("change", collectHeader));
+  $("certificate").addEventListener("change", markMandatory);
   $("applicantDeclaration").addEventListener("change", () => {
     updateDeclarationState();
     if ($("applicantDeclaration").checked && lastStatus?.key === "declarationRequired") setStatus(null, "");

@@ -27,7 +27,7 @@
 .candidateTable td input, .candidateTable td select{ min-width:60px; font-size:12px; }
 
 /* v0.7.0 — column K: several ice conditions, each with its own number of days */
-.candidateTable td.iceCell{ min-width:190px; }
+.candidateTable td.iceCell{ min-width:230px; }
 .iceOption{ display:flex; align-items:center; gap:4px; margin:2px 0; }
 .iceOption label{ display:flex; align-items:center; gap:4px; margin:0; font-weight:normal; font-size:12px; flex:1; white-space:nowrap; }
 .candidateTable .iceOption input[type="number"]{ width:64px; min-width:64px; }
@@ -37,3 +37,15 @@
 .unvettedBox strong{ display:block; text-transform:uppercase; letter-spacing:.02em; }
 .unvettedBox .unvettedOther{ display:block; font-size:13px; font-style:italic; }
 .unvettedCard{ border-left-color:#b45f06; background:#fff8e1; }
+
+/* v0.9.0 — mandatory columns (EXN 2) and missing fields after a refused export */
+.candidateTable thead th.mandatory::after{ content:" *"; color:#ffcf66; font-weight:800; }
+.candidateTable .missingField{ border:2px solid #b00020 !important; background:#fff5f5 !important; }
+/* v0.9.0 — ice days above days on board, on the line itself */
+.iceOption{ flex-wrap:wrap; }
+.iceOption.iceExceed input[type="number"]{ border:2px solid #b00020 !important; background:#fff5f5; }
+.iceOption .iceMsg{ flex-basis:100%; color:#b00020; font-size:11px; font-weight:700; }
+.candidateTable td.iceExceedR{ outline:2px solid #b00020; outline-offset:-2px; color:#b00020; }
+/* v0.9.0 — reminder next to the export buttons */
+.reminder{ margin:8px 0; padding:8px 12px; background:#eef4ff; border-left:4px solid #003366; font-weight:600; color:#003366; }
+.blockList{ margin:6px 0 0; padding-left:18px; }

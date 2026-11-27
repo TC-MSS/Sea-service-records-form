@@ -55,7 +55,8 @@ export const CERTIFICATES = [
 
 export const PROPULSION = [["MOTOR", "Motor", "Moteur"], ["STEAM", "Steam", "Vapeur"], ["DIESEL_ELECTRIC", "Diesel-electric", "Diesel-électrique"], ["OTHER", "Other", "Autre"]];
 
-export const VOYAGE_CLASSES = [["NC1", "NC1", "PN1"], ["NC2", "NC2", "PN2"], ["UNLIMITED", "Unlimited", "Illimité"], ["SHELTERED", "Sheltered Waters", "Eaux abritées"]];
+/** v0.9.0 — NC1 / NC2 spelled out (codes unchanged). */
+export const VOYAGE_CLASSES = [["NC1", "Near Coastal, Class 1", "À proximité du littoral, classe 1"], ["NC2", "Near Coastal, Class 2", "À proximité du littoral, classe 2"], ["UNLIMITED", "Unlimited", "Illimité"], ["SHELTERED", "Sheltered Waters", "Eaux abritées"]];
 
 export function labelFor(list, code, language = "en") {
   const item = list.find(([value]) => value === code);
